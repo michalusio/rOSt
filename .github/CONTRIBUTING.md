@@ -18,15 +18,15 @@ The project can be contributed to in this way:
 
 ---
 
-Or just [click here](https://github.com/0xffset/rOSt/fork)
+Or just [click here](https://github.com/michalusio/rOSt/fork)
 
 2. ### Find an issue to work on
 
-   Go through the [list of issues](https://github.com/0xffset/rOSt/issues) of the project and find an issue which sounds interesting to you.
+   Go through the [list of issues](https://github.com/michalusio/rOSt/issues) of the project and find an issue which sounds interesting to you.
 
-   Issues labelled as [**[help wanted]**](https://github.com/0xffset/rOSt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are good targets for getting accustomed to the project.
+   Issues labelled as [**[help wanted]**](https://github.com/michalusio/rOSt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are good targets for getting accustomed to the project.
 
-   Some of the issues are labelled as [**[todo <g-emoji class="g-emoji" alias="spiral_notepad" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f5d2.png">🗒️</g-emoji>]**](https://github.com/0xffset/rOSt/issues?q=is%3Aissue+is%3Aopen+label%3A%22todo+%3Aspiral_notepad%3A%22), which usually means they are scoped to a particular part of the project and do not need knowledge of the whole.
+   Some of the issues are labelled as [**[todo <g-emoji class="g-emoji" alias="spiral_notepad" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f5d2.png">🗒️</g-emoji>]**](https://github.com/michalusio/rOSt/issues?q=is%3Aissue+is%3Aopen+label%3A%22todo+%3Aspiral_notepad%3A%22), which usually means they are scoped to a particular part of the project and do not need knowledge of the whole.
 
 3. ### Work on the issue on your fork of the project
 
