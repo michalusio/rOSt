@@ -35,7 +35,7 @@ jobs:
         with:
           profile: default
           toolchain: nightly-2026-02-01
-          target: x86-64-unknown-none
+          target: x86_64-unknown-none
           components: clippy
           override: true
 
