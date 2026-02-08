@@ -8,11 +8,10 @@ If you are interested in contributing to the project, please visit the [Contribu
 
 The project is divided into multiple folders:
 
-1. [src](src/) contains the main entry point of the kernel.
-2. [boot](boot/) contains the settings for building the image with the bootloader, and QEMU settings.
-3. [utils](utils/) contains utility functions, constants and structures that could be used throughout the kernel.
-4. [drivers](drivers/) contains drivers that add extended functionality that is not in the scope of the kernel core.
-5. [kernel](kernel/) contains the core library and functionality.
+1. [src](src/) contains the QEMU setup.
+2. [kernel](kernel/) contains the actual OS kernel, binding everything together.
+3. [internal_utils](internal_utils/) contains utility functions, constants and structures that are used throughout the kernel and drivers.
+4. [drivers](drivers/) contains drivers that add extended functionality that is not in the scope of the kernel core, for example VGA and ATA support.
 
 ### Requirements
 
@@ -25,20 +24,15 @@ Rust should automatically switch to the nightly channel and install the llvm too
 ## How to run
 
 ```bash
-cargo krun
+cargo run bios
 ```
 
-will build the kernel and start up a qemu instance booting the kernel in debug mode.
-
-## Testing
-
-Tests are ran after the kernel initializes the necessities like kernel heap, general memory management and interrupts.
-
-To run the tests do:
-
+Or if you want to run an UEFI image:
 ```bash
-cargo ktest
+cargo run uefi
 ```
+
+The command will build the kernel and start up a qemu instance, booting the kernel in debug mode.
 
 ### Troubleshooting
 
