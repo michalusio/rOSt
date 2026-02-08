@@ -86,15 +86,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "boot"
-version = "0.1.0"
-dependencies = [
- "bootloader-locator",
- "locate-cargo-manifest",
- "runner-utils",
-]
-
-[[package]]
 name = "bootloader"
 version = "0.11.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -117,15 +108,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10a5e475c13d3d988e105b76b92aeea94614c12590c33495165c02b16e895375"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "bootloader-locator"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaaa9db3339d32c2622f2e5d0731eb82a468d3439797c9d4fe426744fe2bd551"
-dependencies = [
- "json",
 ]
 
 [[package]]
@@ -391,12 +373,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "json"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
-
-[[package]]
 name = "kernel"
 version = "0.1.0"
 dependencies = [
@@ -461,15 +437,6 @@ name = "llvm-tools"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "955be5d0ca0465caf127165acb47964f911e2bc26073e865deb8be7189302faf"
-
-[[package]]
-name = "locate-cargo-manifest"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db985b63431fe09e8d71f50aeceffcc31e720cb86be8dad2f38d084c5a328466"
-dependencies = [
- "json",
-]
 
 [[package]]
 name = "lock_api"
@@ -663,16 +630,6 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "runner-utils"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9dc6848b056990cd51e72aa5556bdbea4a96013e8b18635d183c84159c2988f"
-dependencies = [
- "thiserror",
- "wait-timeout",
 ]
 
 [[package]]
@@ -1027,15 +984,6 @@ name = "volatile"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3ca98349dda8a60ae74e04fd90c7fb4d6a4fbe01e6d3be095478aa0b76f6c0c"
-
-[[package]]
-name = "wait-timeout"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f200f5b12eb75f8c1ed65abd4b2db8a6e1b138a20de009dacee265a2498f3f6"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "wasi"

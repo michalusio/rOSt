@@ -24,7 +24,6 @@ incremental = false
 [workspace]
 members = [
     "internal_utils",
-    "boot",
     "kernel",
     "drivers/ata",
     "drivers/vga",

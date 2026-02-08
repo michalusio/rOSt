@@ -58,6 +58,7 @@ fn main() {
             .arg(format!("format=raw,file={bios_path}"));
     }
 
+    // TODO Figure out why bootloading takes so much time
     let mut child = cmd.spawn().expect("failed to start qemu-system-x86_64");
     let status = child.wait().expect("failed to wait on qemu");
     match status.code().unwrap_or(1) {
