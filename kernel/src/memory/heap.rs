@@ -1,14 +1,11 @@
-/// Where the kernel heap starts
-const HEAP_START: usize = 0x_5555_AAAA_0000;
-/// Size of the kernel heap
-const HEAP_SIZE: usize = 16 * 1024 * 1024; // 16 MiB
-
 use x86_64::{
-    structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size2MiB,
-    },
     VirtAddr,
+    structures::paging::{
+        FrameAllocator, Mapper, Page, PageTableFlags, Size2MiB, mapper::MapToError,
+    },
 };
+
+use crate::addressing::{HEAP_SIZE, HEAP_START};
 
 use super::{allocator::ALLOCATOR, frame_allocator::BitmapFrameAllocator};
 
@@ -18,7 +15,7 @@ pub fn init_heap(
     frame_allocator: &mut BitmapFrameAllocator,
 ) -> Result<(), MapToError<Size2MiB>> {
     let page_range = {
-        let heap_start = VirtAddr::new(HEAP_START as u64);
+        let heap_start = VirtAddr::new(HEAP_START);
         let heap_end = heap_start + HEAP_SIZE - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
@@ -35,7 +32,9 @@ pub fn init_heap(
     }
 
     unsafe {
-        ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
+        ALLOCATOR
+            .lock()
+            .init(HEAP_START as *mut u8, HEAP_SIZE as usize);
     }
 
     Ok(())

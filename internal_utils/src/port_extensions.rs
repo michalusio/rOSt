@@ -27,7 +27,7 @@ impl<T: PortRead, A: PortReadAccess> PortExtRead<T> for PortGeneric<T, A> {
     #[inline]
     unsafe fn read_to_buffer(self: &mut PortGeneric<T, A>, buffer: &mut [T]) {
         for data in buffer {
-            *data = self.read();
+            *data = unsafe { self.read() };
         }
     }
 }
@@ -37,7 +37,7 @@ impl<A: PortReadAccess> PortExtRead<u8> for PortGeneric<u16, A> {
     unsafe fn read_to_buffer(self: &mut PortGeneric<u16, A>, buffer: &mut [u8]) {
         let mut index = 0;
         while index < buffer.len() {
-            let value = self.read();
+            let value = unsafe { self.read() };
             buffer[index] = value as u8;
             index += 1;
             buffer[index] = (value >> 8) as u8;
@@ -60,7 +60,7 @@ impl<A: PortWriteAccess> PortExtWrite<u8> for PortGeneric<u16, A> {
             let mut value = buffer[index] as u16;
             index += 1;
             value |= (buffer[index] as u16) << 8;
-            self.write(value);
+            unsafe { self.write(value) };
             index += 1;
         }
     }
@@ -76,7 +76,7 @@ impl<T: PortWrite + Copy, A: PortWriteAccess> PortExtWrite<T> for PortGeneric<T,
     #[inline]
     unsafe fn write_from_buffer(self: &mut PortGeneric<T, A>, buffer: &[T]) {
         for data in buffer {
-            self.write(*data);
+            unsafe { self.write(*data) };
             x86_64::instructions::nop(); // We need a tiny delay when batch-writing to IO ports
             x86_64::instructions::nop();
         }

@@ -13,9 +13,8 @@ pub struct DiskDescriptor {
     model_number_bytes: [u8; 40],
     pub udma_available_modes: [bool; 8],
     pub udma_current_mode: u8,
-    pub supports_lba_48: bool,
-    pub lba_28_addressable_sectors: u32,
-    pub lba_48_addressable_sectors: u64,
+    pub lba_28_addressable_sectors: u64,
+    pub lba_48_addressable_sectors: Option<u64>,
 }
 
 impl DiskDescriptor {
@@ -68,7 +67,7 @@ impl DiskDescriptor {
         };
 
         let supports_lba_48 = buffer[83] & 0x0400 != 0;
-        let lba_28_addressable_sectors = (buffer[61] as u32) << 16 | (buffer[60] as u32);
+        let lba_28_addressable_sectors = (buffer[61] as u64) << 16 | (buffer[60] as u64);
         let lba_48_addressable_sectors = (buffer[103] as u64) << 48
             | (buffer[102] as u64) << 32
             | (buffer[101] as u64) << 16
@@ -87,9 +86,12 @@ impl DiskDescriptor {
             model_number_bytes: model_number,
             udma_available_modes,
             udma_current_mode,
-            supports_lba_48,
             lba_28_addressable_sectors,
-            lba_48_addressable_sectors,
+            lba_48_addressable_sectors: if supports_lba_48 {
+                Some(lba_48_addressable_sectors)
+            } else {
+                None
+            },
         }
     }
 }

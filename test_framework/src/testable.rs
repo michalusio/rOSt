@@ -1,5 +1,4 @@
-use internal_utils::structures::kernel_information::KernelInformation;
-use internal_utils::{serial_print, serial_println};
+use internal_utils::{kernel_information::KernelInformation, log, logln};
 
 use crate::ansi_colors::Green;
 
@@ -14,8 +13,8 @@ where
 {
     /// Runs the test and prints the result
     fn run(&self, kernel_information: KernelInformation) {
-        serial_print!("{}...\t", core::any::type_name::<T>());
+        log!("{}...\t", core::any::type_name::<T>());
         self(kernel_information);
-        serial_println!("{}", Green("[ok]"));
+        logln!("{}", Green("[ok]"));
     }
 }

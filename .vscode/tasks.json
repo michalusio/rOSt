@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Launch QEMU",
+            "type": "shell",
+            "windows": {
+                "command": "start -FilePath 'qemu-system-i386' -ArgumentList '-S -gdb tcp::1234 -boot d -cdrom bin/myos.iso -m 512'"
+            },
+            "linux": {
+                "command": "qemu -S -gdb tcp::1234 -boot d -cdrom bin/myos.iso -m 512"
+            }
+        }
+    ]
+}

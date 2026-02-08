@@ -1,18 +1,19 @@
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "kernel"
 version = "0.1.0"
-edition = { workspace=true }
+edition = { workspace = true }
 
 [dependencies]
-internal_utils = { workspace=true }
-bootloader = { workspace=true }
-spin = { workspace=true }
-x86_64 = { workspace=true }
-uart_16550 = { workspace=true }
-pic8259 = { workspace=true }
-pc-keyboard = { workspace=true }
-linked_list_allocator = { workspace=true }
-lazy_static = { workspace=true }
-test_framework = { workspace=true }
+internal_utils = { workspace = true }
+bootloader_api = { workspace = true }
+spin = { workspace = true }
+x86_64 = { workspace = true }
+uart_16550 = { workspace = true }
+pic8259 = { workspace = true }
+pc-keyboard = { workspace = true }
+linked_list_allocator = { workspace = true }
+lazy_static = { workspace = true }
+test_framework = { workspace = true }
+tinytga = { workspace = true }
+vga = { workspace = true }
+ata = { workspace = true }

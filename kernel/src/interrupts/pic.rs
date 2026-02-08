@@ -21,11 +21,6 @@ impl InterruptIndex {
     pub fn as_u8(self) -> u8 {
         self as u8
     }
-
-    /// Returns the corresponding interrupt number for this interrupt type as a usize
-    pub fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
 }
 
 /// The PICs of the system.

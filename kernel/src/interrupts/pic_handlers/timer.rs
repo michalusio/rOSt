@@ -1,35 +1,21 @@
 use crate::interrupts::pic::{InterruptIndex, PICS};
-use crate::memory::with_kernel_memory;
-use crate::processes::{get_scheduler, run_next_thread, RegistersState};
-use core::arch::asm;
-use internal_utils::get_current_tick;
-use internal_utils::{pop_all, push_all};
+use internal_utils::clocks::get_current_time;
+use internal_utils::logln;
+use lazy_static::lazy_static;
+use spin::Mutex;
+use x86_64::structures::idt::InterruptStackFrame;
 
-#[no_mangle]
-#[naked]
-pub unsafe extern "C" fn _timer() -> ! {
-    asm!(
-        // We have RFLAGS and RIP on the stack already.
-        push_all!(),
-        "mov rdi, rsp",
-        "call timer_interrupt_handler",
-        pop_all!(),
-        "iretq",
-        options(noreturn)
-    );
+lazy_static! {
+    pub static ref SHOW_CLOCK: Mutex<bool> = Mutex::new(false);
 }
 
-#[no_mangle]
-extern "C" fn timer_interrupt_handler(registers_state: *const RegistersState) {
-    let registers_state = unsafe { *registers_state };
-    let tick = get_current_tick();
-
-    with_kernel_memory(|| {
-        get_scheduler().timer_tick(registers_state, tick);
-        unsafe {
-            PICS.lock()
-                .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
-        }
-        run_next_thread();
-    });
+pub extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    let should_show_clock: bool = { *SHOW_CLOCK.lock() };
+    if should_show_clock {
+        logln!("{}", get_current_time());
+    }
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
+    }
 }

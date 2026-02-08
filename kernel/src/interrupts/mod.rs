@@ -6,20 +6,23 @@
 
 mod cpu_handlers;
 mod interrupt_register;
-pub use interrupt_register::init_idt;
+use internal_utils::logln;
 pub(crate) mod gdt;
 mod pic_handlers;
-pub use gdt::{reload_gdt, GDT};
+pub use gdt::GDT;
 mod pic;
+pub use pic_handlers::SHOW_CLOCK;
 
-use crate::debug;
+use crate::interrupts::{gdt::reload_gdt, interrupt_register::init_idt};
 
 /// Initializes the PICs and enables interrupts
 pub fn enable() {
+    reload_gdt();
+    init_idt();
     unsafe {
         // can cause undefined behaviour if the offsets were not set correctly
         pic::PICS.lock().initialize();
     }
     x86_64::instructions::interrupts::enable();
-    debug::log("Interrupts enabled");
+    logln!("Interrupts enabled");
 }

@@ -1,19 +1,24 @@
 use crate::static_stack::StaticStack;
 use alloc::{boxed::Box, slice};
-use internal_utils::structures::kernel_information::{KernelInformation, PixelFormat};
-use noto_sans_mono_bitmap::{get_bitmap, BitmapChar};
+use internal_utils::gpu_device::{
+    ClearableGPUDevice, GPUDevice, ImageGPUDevice, PlaneGPUDevice, Point2D, ShapeGPUDevice,
+    TextGPUDevice, VGAColor,
+};
+use internal_utils::gpu_device::{
+    GPUDeviceCapabilityMut, GPUDeviceCapabilityRef, GPUDeviceCapabilityRequest,
+};
+use internal_utils::has_gpu_device_capability;
+use internal_utils::kernel_information::KernelInformation;
+use internal_utils::kernel_information::kernel_frame_buffer::PixelFormat;
+use noto_sans_mono_bitmap::{RasterizedChar, get_raster};
 use tinytga::RawTga;
 
 use crate::{
     pixel_buffer::{BasePixelBuffer, PixelBuffer},
-    vga_core::{ImageDrawable, CHAR_HEIGHT, INVALID_CHAR},
+    vga_core::{CHAR_HEIGHT, INVALID_CHAR},
 };
 
-use super::{
-    point_2d::Point2D,
-    vga_color::VGAColor,
-    vga_core::{Clearable, PlainDrawable, ShapeDrawable, TextDrawable, CHAR_WEIGHT, CHAR_WIDTH},
-};
+use super::vga_core::{CHAR_WEIGHT, CHAR_WIDTH};
 
 pub struct VGADevice {
     pub width: usize,
@@ -22,26 +27,19 @@ pub struct VGADevice {
     pixel_buffer: Box<dyn PixelBuffer>,
 }
 
-impl Clearable for VGADevice {
+impl ClearableGPUDevice for VGADevice {
     fn clear(&mut self, color: VGAColor<u8>) {
-        for x in 0..self.width {
-            for y in 0..self.height {
-                self.draw_point(x as u16, y as u16, color);
-            }
-        }
+        self.fill_rectangle(0, 0, self.width as u16, self.height as u16, color);
     }
 }
 
-impl PlainDrawable for VGADevice {
+impl PlaneGPUDevice for VGADevice {
     #[inline(always)]
     fn draw_point(&mut self, x: u16, y: u16, color: VGAColor<u8>) {
         let x = x as usize;
         let y = y as usize;
         let index = (y * self.stride) + x;
         self.pixel_buffer.put_pixel(index, color);
-    }
-    fn draw_point_p(&mut self, p: Point2D<u16>, color: VGAColor<u8>) {
-        self.draw_point(p.x, p.y, color);
     }
 
     fn draw_line(&mut self, x1: u16, y1: u16, x2: u16, y2: u16, color: VGAColor<u8>) {
@@ -113,9 +111,6 @@ impl PlainDrawable for VGADevice {
             }
         }
     }
-    fn draw_line_p(&mut self, a: Point2D<u16>, b: Point2D<u16>, color: VGAColor<u8>) {
-        self.draw_line(a.x, a.y, b.x, b.y, color);
-    }
 
     fn draw_bezier(
         &mut self,
@@ -136,7 +131,7 @@ impl PlainDrawable for VGADevice {
                 t_stack.push(&(frame.0, mid)).unwrap();
                 t_stack.push(&(mid, frame.1)).unwrap();
             } else {
-                self.draw_line_p(a, b, color);
+                self.draw_line(a.x, a.y, b.x, b.y, color);
             }
         }
     }
@@ -159,30 +154,26 @@ fn bezier_point(
     (((_p1 * t_1 + _p2 * t) * t_1 + _p3 * t2) * t_1 + _p4 * t3).into()
 }
 
-impl ShapeDrawable for VGADevice {
+impl ShapeGPUDevice for VGADevice {
     fn draw_rectangle(&mut self, x: u16, y: u16, width: u16, height: u16, color: VGAColor<u8>) {
         self.draw_line(x, y, x + width, y, color);
         self.draw_line(x, y + height, x + width, y + height, color);
         self.draw_line(x, y, x, y + height, color);
         self.draw_line(x + width, y, x + width, y + height, color);
     }
-    fn draw_rectangle_p(&mut self, min: Point2D<u16>, max: Point2D<u16>, color: VGAColor<u8>) {
-        self.draw_rectangle(min.x, min.y, max.x - min.x, max.y - min.y, color);
-    }
 
     fn fill_rectangle(&mut self, x: u16, y: u16, width: u16, height: u16, color: VGAColor<u8>) {
-        for i in x..x + width {
-            for j in y..y + height {
-                self.draw_point(i, j, color);
+        let mut index = 0;
+        for _ in y..y + height {
+            for _ in x..x + width {
+                self.pixel_buffer.put_pixel(index, color);
+                index += 1;
             }
         }
     }
-    fn fill_rectangle_p(&mut self, min: Point2D<u16>, max: Point2D<u16>, color: VGAColor<u8>) {
-        self.fill_rectangle(min.x, min.y, max.x - min.x, max.y - min.y, color);
-    }
 }
 
-impl TextDrawable for VGADevice {
+impl TextGPUDevice for VGADevice {
     fn draw_string(
         &mut self,
         x: u16,
@@ -193,7 +184,7 @@ impl TextDrawable for VGADevice {
     ) -> (u16, u16) {
         let mut pos_x = x;
         let mut pos_y = y;
-        for (_i, c) in text.chars().enumerate() {
+        for c in text.chars() {
             match c {
                 '\n' => {
                     pos_x = reset_x;
@@ -205,7 +196,7 @@ impl TextDrawable for VGADevice {
                         pos_y += CHAR_HEIGHT as u16;
                     }
                     let invalid_char = &*INVALID_CHAR;
-                    let bitmap_char = get_bitmap(c, CHAR_WEIGHT, CHAR_HEIGHT);
+                    let bitmap_char = get_raster(c, CHAR_WEIGHT, CHAR_HEIGHT);
                     self.draw_char(
                         pos_x,
                         pos_y,
@@ -222,7 +213,7 @@ impl TextDrawable for VGADevice {
     fn measure_string(&self, x: u16, y: u16, text: &str, reset_x: u16) -> (u16, u16) {
         let mut pos_x = x;
         let mut pos_y = y;
-        for (_i, c) in text.chars().enumerate() {
+        for c in text.chars() {
             match c {
                 '\n' => {
                     pos_x = reset_x;
@@ -241,7 +232,7 @@ impl TextDrawable for VGADevice {
     }
 }
 
-impl ImageDrawable for VGADevice {
+impl ImageGPUDevice for VGADevice {
     fn draw_image(&mut self, x0: u16, y0: u16, image: &RawTga) {
         for pixel in image.pixels() {
             let pos = pixel.position;
@@ -254,16 +245,15 @@ impl ImageDrawable for VGADevice {
             self.draw_point(pos.x as u16 + x0, pos.y as u16 + y0, color);
         }
     }
-    fn draw_image_p(&mut self, pos: Point2D<u16>, image: &RawTga) {
-        self.draw_image(pos.x, pos.y, image);
-    }
 }
 
 impl VGADevice {
-    fn draw_char(&mut self, x: u16, y: u16, char: &BitmapChar, color: VGAColor<u8>) {
-        for (iy, row) in char.bitmap().iter().enumerate() {
-            for (ix, byte) in row.iter().enumerate() {
-                self.draw_point(ix as u16 + x, iy as u16 + y, color.mul_alpha(*byte));
+    fn draw_char(&mut self, x: u16, y: u16, char: &RasterizedChar, color: VGAColor<u8>) {
+        for (iy, row) in char.raster().iter().enumerate() {
+            let mut index = (y as usize + iy) * self.stride + x as usize;
+            for byte in row.iter() {
+                self.pixel_buffer.put_pixel(index, color.mul_alpha(*byte));
+                index += 1;
             }
         }
     }
@@ -280,28 +270,28 @@ impl VGADeviceFactory {
             stride: buffer.stride,
             pixel_buffer: match buffer.format {
                 PixelFormat::RGB => Box::new(BasePixelBuffer::<{ PixelFormat::RGB }> {
-                    bytes_per_pixel_shift: log2(buffer.bytes_per_pixel),
+                    bytes_per_pixel: buffer.bytes_per_pixel,
                     frame_pointer: unsafe {
                         slice::from_raw_parts_mut::<u8>(
-                            buffer.buffer,
+                            buffer.buffer.get(),
                             buffer.bytes_per_pixel * buffer.stride * buffer.height,
                         )
                     },
                 }),
                 PixelFormat::BGR => Box::new(BasePixelBuffer::<{ PixelFormat::BGR }> {
-                    bytes_per_pixel_shift: log2(buffer.bytes_per_pixel),
+                    bytes_per_pixel: buffer.bytes_per_pixel,
                     frame_pointer: unsafe {
                         slice::from_raw_parts_mut::<u8>(
-                            buffer.buffer,
+                            buffer.buffer.get(),
                             buffer.bytes_per_pixel * buffer.stride * buffer.height,
                         )
                     },
                 }),
                 PixelFormat::U8 => Box::new(BasePixelBuffer::<{ PixelFormat::U8 }> {
-                    bytes_per_pixel_shift: log2(buffer.bytes_per_pixel),
+                    bytes_per_pixel: buffer.bytes_per_pixel,
                     frame_pointer: unsafe {
                         slice::from_raw_parts_mut::<u8>(
-                            buffer.buffer,
+                            buffer.buffer.get(),
                             buffer.bytes_per_pixel * buffer.stride * buffer.height,
                         )
                     },
@@ -311,13 +301,14 @@ impl VGADeviceFactory {
     }
 }
 
-fn log2(value: usize) -> u8 {
-    match value {
-        1 => 0,
-        2 => 1,
-        3 => 2,
-        4 => 2,
-        // Low chance of getting that, screens generally don't support over 4 bytes per pixel
-        _ => unimplemented!("log2 needs more values"),
+impl GPUDevice for VGADevice {
+    fn width(&self) -> usize {
+        self.width
     }
+
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    has_gpu_device_capability!(Clearable, Plane, Shape, Text, Image);
 }

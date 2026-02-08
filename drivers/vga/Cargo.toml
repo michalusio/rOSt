@@ -1,14 +1,11 @@
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "vga"
 version = "0.1.0"
-edition = { workspace=true }
+edition = { workspace = true }
 
 [dependencies]
-internal_utils = { workspace=true }
-kernel = { workspace=true }
-noto-sans-mono-bitmap = { workspace=true }
-spin = { workspace=true }
-tinytga = { workspace=true }
-lazy_static = { workspace=true }
+internal_utils = { workspace = true }
+noto-sans-mono-bitmap = { workspace = true }
+spin = { workspace = true }
+tinytga = { workspace = true }
+lazy_static = { workspace = true }

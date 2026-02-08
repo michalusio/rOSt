@@ -1,13 +1,13 @@
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "internal_utils"
 version = "0.1.0"
-edition = { workspace=true }
+edition = { workspace = true }
 
 [dependencies]
-x86_64 = { workspace=true }
-bootloader = { workspace=true }
-spin = { workspace=true }
-uart_16550 = { workspace=true }
-lazy_static = { workspace=true }
+x86_64 = { workspace = true }
+bootloader_api = { workspace = true }
+spin = { workspace = true }
+uart_16550 = { workspace = true }
+tinytga = { workspace = true }
+bitflags = { workspace = true }
+lazy_static = { workspace = true }

@@ -1,5 +1,5 @@
-use crate::debug;
-use bootloader::BootInfo;
+use bootloader_api::BootInfo;
+use internal_utils::logln;
 use x86_64::VirtAddr;
 
 use super::{
@@ -19,5 +19,5 @@ pub fn init(boot_info: &'static BootInfo, allocator: &mut BitmapFrameAllocator) 
     unsafe { page_table::init(pmo) };
     let mut mapper = MEMORY_MAPPER.lock();
     init_heap(mapper.as_mut().unwrap(), allocator).expect("heap initialization failed");
-    debug::log("Heap initialized");
+    logln!("Heap initialized");
 }

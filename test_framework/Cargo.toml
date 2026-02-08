@@ -1,10 +1,9 @@
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "test_framework"
 version = "0.1.0"
-edition = { workspace=true }
+edition = { workspace = true }
 
 [dependencies]
-x86_64 = { workspace=true }
-internal_utils = { workspace=true }
+x86_64 = { workspace = true }
+internal_utils = { workspace = true }
+spin = { workspace = true }

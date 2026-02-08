@@ -1,7 +1,8 @@
 {
   "recommendations": [
-    "serayuzgur.crates",
-    "bungcip.better-toml",
-    "rust-lang.rust-analyzer"
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml",
+    "fill-labs.dependi",
+    "github.vscode-github-actions"
   ]
 }

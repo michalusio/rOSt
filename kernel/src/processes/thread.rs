@@ -1,13 +1,11 @@
-use core::cell::RefCell;
-
-use alloc::rc::Rc;
-use internal_utils::get_current_tick;
+use alloc::sync::Arc;
+use spin::Mutex;
 use x86_64::VirtAddr;
 
 use super::process::Process;
 
-use super::dispatcher::remove_thread_from_process_queues;
 use super::RegistersState;
+use super::dispatcher::remove_thread_from_process_queues;
 
 #[derive(Debug, Clone)]
 pub enum ThreadState {
@@ -33,7 +31,7 @@ pub struct Thread {
     /// The tick the thread has been last ran on.
     pub last_tick: u64,
     /// The process the thread is running for.
-    pub process: Rc<RefCell<Process>>,
+    pub process: Arc<Mutex<Process>>,
 }
 
 impl Thread {
@@ -43,24 +41,28 @@ impl Thread {
         self.total_ticks * 100 / ticks_maximum
     }
 
-    pub fn change_state(thread: Rc<RefCell<Thread>>, state: ThreadState) {
+    pub fn change_state(thread: Arc<Mutex<Thread>>, state: ThreadState) {
         {
-            let borrowed_thread = thread.borrow();
-            let mut borrowed_process = borrowed_thread.process.borrow_mut();
+            let borrowed_thread = thread.lock();
+            let mut borrowed_process = borrowed_thread.process.lock();
             remove_thread_from_process_queues(
                 &borrowed_thread,
                 thread.clone(),
                 &mut borrowed_process,
             );
         }
-        let mut borrowed_thread = thread.borrow_mut();
+        let mut borrowed_thread = thread.lock();
         borrowed_thread.state = state;
         {
-            let mut borrowed_process = borrowed_thread.process.borrow_mut();
+            let mut borrowed_process = borrowed_thread.process.lock();
             match borrowed_thread.state {
-                ThreadState::NotStarted => borrowed_process.not_started_threads.push(thread.clone()),
+                ThreadState::NotStarted => {
+                    borrowed_process.not_started_threads.push(thread.clone())
+                }
                 ThreadState::Ready => borrowed_process.ready_threads.push(thread.clone()),
-                ThreadState::Running => panic!("Trying to change a thread to running state - use dispatcher::switch_to_thread() instead"),
+                ThreadState::Running => panic!(
+                    "Trying to change a thread to running state - use dispatcher::switch_to_thread() instead"
+                ),
                 ThreadState::Sleeping(_) => borrowed_process.sleeping_threads.push(thread.clone()),
                 ThreadState::Terminated => {}
             }
@@ -74,18 +76,18 @@ impl Thread {
     pub unsafe fn new_native(
         address: u64,
         stack_pointer: u64,
-        process: Rc<RefCell<Process>>,
-    ) -> Rc<RefCell<Self>> {
+        process: Arc<Mutex<Process>>,
+    ) -> Arc<Mutex<Self>> {
         let thread = Thread {
             id: {
-                let process = process.borrow();
+                let process = process.lock();
                 process.not_started_threads.len()
                     + process.ready_threads.len()
                     + process.sleeping_threads.len()
             } as u64,
             state: ThreadState::NotStarted,
             total_ticks: 0,
-            start_tick: get_current_tick(),
+            start_tick: 0, //get_current_tick(),
             last_tick: 0,
             process: process.clone(),
             registers_state: RegistersState::new(
@@ -94,8 +96,8 @@ impl Thread {
                 VirtAddr::new(stack_pointer),
             ),
         };
-        let rc = Rc::new(RefCell::new(thread));
-        process.borrow_mut().not_started_threads.push(rc.clone());
+        let rc = Arc::new(Mutex::new(thread));
+        process.lock().not_started_threads.push(rc.clone());
         rc
     }
 }

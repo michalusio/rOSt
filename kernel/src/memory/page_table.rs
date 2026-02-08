@@ -2,8 +2,8 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use x86_64::registers::control::Cr3;
 use x86_64::{
-    structures::paging::{OffsetPageTable, PageTable},
     VirtAddr,
+    structures::paging::{OffsetPageTable, PageTable},
 };
 
 lazy_static! {
@@ -17,10 +17,10 @@ lazy_static! {
 /// `physical_memory_offset`. Also, this function must be only called once
 /// to avoid aliasing `&mut` references (which is undefined behavior).
 pub unsafe fn init(physical_memory_offset: VirtAddr) {
-    let level_4_table = active_level_4_table(physical_memory_offset);
+    let level_4_table = unsafe { active_level_4_table(physical_memory_offset) };
     let _ = MEMORY_MAPPER
         .lock()
-        .insert(OffsetPageTable::new(level_4_table, physical_memory_offset));
+        .insert(unsafe { OffsetPageTable::new(level_4_table, physical_memory_offset) });
 }
 
 /// Returns a mutable reference to the active level 4 table.
@@ -36,5 +36,5 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut
     let virt = physical_memory_offset + phys.as_u64();
     let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
-    &mut *page_table_ptr // unsafe
+    unsafe { &mut *page_table_ptr }
 }

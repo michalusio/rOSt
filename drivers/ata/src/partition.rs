@@ -1,4 +1,6 @@
-use crate::{constants::ErrorRegisterFlags, ATADisk, DiskDescriptor, PartitionDescriptor};
+use internal_utils::block_device::{BlockDevice, BlockDeviceError};
+
+use crate::{ATADisk, DiskDescriptor, PartitionDescriptor};
 
 #[derive(Clone)]
 pub struct ATAPartition {
@@ -11,31 +13,20 @@ impl ATAPartition {
         self.disk.descriptor.clone()
     }
 
-    pub fn read_sector(&mut self, lba: u64) -> Result<[u8; 512], PartitionIOError> {
+    pub fn read_sector(&mut self, lba: u64) -> Result<[u8; 512], BlockDeviceError> {
         if lba >= self.descriptor.sectors {
-            Err(PartitionIOError::AddressNotInRange)
+            Err(BlockDeviceError::OutOfRange)
         } else {
-            self.disk
-                .read_sector(lba + self.descriptor.start_lba)
-                .map_err(PartitionIOError::ATAError)
+            self.disk.read_sector(lba + self.descriptor.start_lba)
         }
     }
 
-    pub fn write_sector(&mut self, lba: u64, buffer: &[u8; 512]) -> Result<(), PartitionIOError> {
+    pub fn write_sector(&mut self, lba: u64, buffer: &[u8; 512]) -> Result<(), BlockDeviceError> {
         if lba >= self.descriptor.sectors {
-            Err(PartitionIOError::AddressNotInRange)
+            Err(BlockDeviceError::OutOfRange)
         } else {
             self.disk
                 .write_sector(lba + self.descriptor.start_lba, buffer)
-                .map_err(PartitionIOError::ATAError)
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PartitionIOError {
-    ATAError(ErrorRegisterFlags),
-    AddressNotInRange,
-    TooManyPartitions,
-    Unknown,
 }

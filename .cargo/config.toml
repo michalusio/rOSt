@@ -1,12 +1,4 @@
-[target.'cfg(target_os = "none")']
-runner = "cargo run --package boot --release --"
+[unstable]
+bindeps = true
 
-[alias]
-kbuild = "build --target x86_64-custom.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem" #dev
-kimage = "run --target x86_64-custom.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem -- --no-run" #dev
-krun = "run --target x86_64-custom.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem" #dev
-kbuild-r = "build --target x86_64-custom.json -Zbuild-std=core,alloc --release -Zbuild-std-features=compiler-builtins-mem" #dev
-kimage-r = "run --target x86_64-custom.json -Zbuild-std=core,alloc --release -Zbuild-std-features=compiler-builtins-mem -- --no-run" #release
-krun-r = "run --target x86_64-custom.json -Zbuild-std=core,alloc --release -Zbuild-std-features=compiler-builtins-mem" #release
-ktest = "test --target x86_64-custom.json --bins -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem"
-kdoc = "doc --target x86_64-custom.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem"
+[build]

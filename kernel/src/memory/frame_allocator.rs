@@ -1,19 +1,19 @@
-use bootloader::{
-    boot_info::{MemoryRegionKind, MemoryRegions},
+use bootloader_api::{
     BootInfo,
+    info::{MemoryRegionKind, MemoryRegions},
 };
-use internal_utils::FullFrameAllocator;
+use internal_utils::{
+    display::HexNumber, kernel_information::frame_allocator::FullFrameAllocator, log, logln,
+};
 use spin::Mutex;
 use x86_64::{
+    PhysAddr, VirtAddr,
     structures::paging::{
         FrameAllocator, FrameDeallocator, PageSize, PhysFrame, Size2MiB, Size4KiB,
     },
-    PhysAddr, VirtAddr,
 };
 
 use lazy_static::lazy_static;
-
-use crate::debug;
 
 lazy_static! {
     /// The maximum size of usable memory is 64GiB with this bitflag.
@@ -50,37 +50,49 @@ impl BitmapFrameAllocator {
         } else {
             let pmo = boot_info.physical_memory_offset.as_ref().unwrap();
 
-            // We first need to take a 2M frame and 2x4K frames from the memory map for the bitflags.
+            // We first need to take a 2M frame and a 4K frame from the memory map for the bitflags.
+            // We should probably spread it so we allocate the frames anywhere where they fit
+            // , but for now let's just find a region that will fit them all.
             let usable_memory_region = memory_map
                 .iter()
+                .filter(|region| region.end - region.start >= Size2MiB::SIZE + Size4KiB::SIZE)
                 .find(|region| region.kind == MemoryRegionKind::Usable)
                 .unwrap();
+
+            log!("Using region (");
+            usable_memory_region.start.log_to_separated_hex();
+            log!(") - (");
+            usable_memory_region.end.log_to_separated_hex();
+            logln!(") for the frame allocator");
 
             let (four_kilobytes_frames_bitflag, two_megabyte_frames_bitflag) =
                 get_bitflag_frames(PhysAddr::new(usable_memory_region.start));
 
-            *FOUR_KILOBYTES_FRAMES_BITFLAG.lock() = Some(unsafe {
+            let four_kilo_frame = unsafe {
                 VirtAddr::new(four_kilobytes_frames_bitflag.start_address().as_u64() + pmo)
                     .as_mut_ptr::<[u64; 262144]>()
                     .as_mut()
                     .expect("Cannot allocate the 2M frame")
-            });
-            *TWO_MEGABYTES_FRAMES_BITFLAG.lock() = Some(unsafe {
+            };
+            let two_mega_frame = unsafe {
                 VirtAddr::new(two_megabyte_frames_bitflag.start_address().as_u64() + pmo)
                     .as_mut_ptr::<[u64; 512]>()
                     .as_mut()
                     .expect("Cannot allocate the 4K frame")
-            });
+            };
+
+            logln!("Clearing the allocation bitmaps");
+            // We set everything as used because BIOS may return holes in the memory map.
+            four_kilo_frame.fill(u64::MAX);
+            two_mega_frame.fill(u64::MAX);
+
+            *FOUR_KILOBYTES_FRAMES_BITFLAG.lock() = Some(four_kilo_frame);
+            *TWO_MEGABYTES_FRAMES_BITFLAG.lock() = Some(two_mega_frame);
 
             let mut allocator = BitmapFrameAllocator {
                 memory_map,
                 total_region_area,
             };
-
-            // We set everything as used because BIOS may return holes in the memory map.
-            for frame in 0..32768 {
-                allocator.set_used(frame << 21, Size2MiB::SIZE);
-            }
 
             // Now we need to set the usable memory regions as unused so they're not allocated.
             for region in memory_map
@@ -102,6 +114,7 @@ impl BitmapFrameAllocator {
                 });
             }
 
+            // We set the regions where we placed the frame allocator as taken
             allocator.set_used(
                 four_kilobytes_frames_bitflag.start_address().as_u64(),
                 Size2MiB::SIZE,
@@ -111,7 +124,7 @@ impl BitmapFrameAllocator {
                 Size4KiB::SIZE,
             );
 
-            debug::print_frame_memory(&allocator);
+            print_frame_memory(&allocator);
 
             allocator
         }
@@ -267,8 +280,8 @@ unsafe impl FrameAllocator<Size4KiB> for BitmapFrameAllocator {
                 .find(|(_, flag)| **flag != u64::MAX)?;
 
             // We get the position of the free 4K frame
-            let free_4k_frame = free_4k_frame_flag.1.trailing_ones() as usize
-                + (free_4k_frame_flag.0 << 6) as usize;
+            let free_4k_frame =
+                free_4k_frame_flag.1.trailing_ones() as usize + (free_4k_frame_flag.0 << 6);
 
             // We set the 4K frame as used
             frame_address = PhysAddr::new((free_4k_frame as u64) << 12);
@@ -293,8 +306,7 @@ unsafe impl FrameAllocator<Size2MiB> for BitmapFrameAllocator {
                 .find(|(_, flag)| **flag != u64::MAX)?;
 
             // We get the position of the free 2M frame
-            let free_2m_frame =
-                free_2m_frame.1.trailing_ones() as usize + (free_2m_frame.0 << 6) as usize;
+            let free_2m_frame = free_2m_frame.1.trailing_ones() as usize + (free_2m_frame.0 << 6);
 
             // We set the 2M frame as used
             frame_address = PhysAddr::new((free_2m_frame as u64) << 21);
@@ -312,9 +324,9 @@ fn get_bitflag_frames(start_address: PhysAddr) -> (PhysFrame<Size2MiB>, PhysFram
     let two_megabyte_frames_bitflag: PhysFrame<Size4KiB>;
     // We need to allocate one 2M frame and 2x4K frames, but the region addresses do not have to be 2M aligned!
     // So first we need to check the alignment, and we have 3 options here:
-    // 1. The start address is 2M aligned - we allocate the 2M frame then 2x4K frames, easy.
-    // 2. The start address + 4K is 2M aligned - we allocate one 4K frame first, then 2M, then the other 4K after it.
-    // 3. The start address is not 2M aligned at all - we allocate both 4K frames, then we allocate the 2M frame aligned wherever it is.
+    // 1. The start address is 2M aligned - we allocate the 2M frame then the 4K frame, easy.
+    // 2. The start address + 4K is 2M aligned - we allocate the 4K frame first, then 2M after it.
+    // 3. The start address is not 2M aligned at all - we allocate the 4K frame, then we allocate the 2M frame aligned wherever it is.
     if start_address.is_aligned(Size2MiB::SIZE) {
         four_kilobytes_frames_bitflag = PhysFrame::<Size2MiB>::from_start_address(start_address)
             .expect("2M frame address not aligned");
@@ -343,6 +355,10 @@ impl FullFrameAllocator for BitmapFrameAllocator {
     }
 
     fn get_free_memory_size(&self) -> u64 {
+        self.get_free_4k_frames() << 12
+    }
+
+    fn get_free_4k_frames(&self) -> u64 {
         FOUR_KILOBYTES_FRAMES_BITFLAG
             .lock()
             .as_ref()
@@ -350,6 +366,67 @@ impl FullFrameAllocator for BitmapFrameAllocator {
             .iter()
             .map(|flag| flag.count_zeros() as u64)
             .sum::<u64>()
-            * 4096
+    }
+
+    fn get_free_2m_frames(&self) -> u64 {
+        TWO_MEGABYTES_FRAMES_BITFLAG
+            .lock()
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|flag| flag.count_zeros() as u64)
+            .sum::<u64>()
+    }
+}
+
+#[inline(always)]
+pub fn print_frame_memory(allocator: &BitmapFrameAllocator) {
+    #[cfg(debug_assertions)]
+    {
+        use internal_utils::logln;
+
+        logln!("[   ---{:^15}---   ]", "FRAME ALLOCATOR");
+        {
+            let mut size = allocator.get_total_memory_size();
+            let mut size_format = "B";
+            if size >= 2 * 1024 {
+                if size < 2 * 1024 * 1024 {
+                    size /= 1024;
+                    size_format = "KiB";
+                } else if size < 2 * 1024 * 1024 * 1024 {
+                    size /= 1024 * 1024;
+                    size_format = "MiB";
+                } else {
+                    size /= 1024 * 1024 * 1024;
+                    size_format = "GiB";
+                }
+            }
+            logln!("Total memory: {:>4}{:>4}", size, size_format);
+        }
+        {
+            let mut size = allocator.get_free_memory_size();
+            let mut size_format = "B";
+            if size >= 2 * 1024 {
+                if size < 2 * 1024 * 1024 {
+                    size /= 1024;
+                    size_format = "KiB";
+                } else if size < 2 * 1024 * 1024 * 1024 {
+                    size /= 1024 * 1024;
+                    size_format = "MiB";
+                } else {
+                    size /= 1024 * 1024 * 1024;
+                    size_format = "GiB";
+                }
+            }
+            logln!("Free memory:  {:>4}{:>4}", size, size_format);
+        }
+        {
+            let frames = allocator.get_free_2m_frames();
+            logln!("Free 2M frames:  {:>5}", frames);
+        }
+        {
+            let frames = allocator.get_free_4k_frames();
+            logln!("Free 4K frames:  {:>5}", frames);
+        }
     }
 }

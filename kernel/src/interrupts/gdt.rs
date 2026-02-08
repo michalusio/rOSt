@@ -1,15 +1,13 @@
+use internal_utils::logln;
 use lazy_static::lazy_static;
-use x86_64::registers::segmentation::{SegmentSelector, DS, ES, SS};
+use x86_64::registers::segmentation::{DS, ES, SS, SegmentSelector};
 use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable};
 use x86_64::structures::tss::TaskStateSegment;
 use x86_64::{PrivilegeLevel, VirtAddr};
 
-use crate::debug;
-
 /// the interrupt stack table index of the stack used for double faults
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const NMI_IST_INDEX: u16 = 1;
-pub const TIMER_IST_INDEX: u16 = 2;
 
 lazy_static! {
     /// The TSS of the OS.
@@ -17,7 +15,7 @@ lazy_static! {
         let mut tss = TaskStateSegment::new();
 
         const STACK_SIZE: usize = 4096;
-        #[repr(align(16))]
+        #[repr(C, align(16))]
         struct Stack([u8; STACK_SIZE]);
 
         // Stack used when an exception happens in user mode
@@ -25,10 +23,10 @@ lazy_static! {
 
             static mut STACK: Stack = Stack([0; STACK_SIZE]);
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            let stack_start = VirtAddr::from_ptr(&raw const STACK);
 
             // returns the highest address of the stack because the stack grows downwards
-            stack_start + STACK_SIZE
+            stack_start + STACK_SIZE as u64
         };
 
         // set the interrupt stack table to the appropriate address
@@ -36,30 +34,20 @@ lazy_static! {
 
             static mut STACK: Stack = Stack([0; STACK_SIZE]);
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            let stack_start = VirtAddr::from_ptr(&raw const STACK);
 
             // returns the highest address of the stack because the stack grows downwards
-            stack_start + STACK_SIZE
+            stack_start + STACK_SIZE as u64
         };
 
         tss.interrupt_stack_table[NMI_IST_INDEX as usize] = {
 
             static mut STACK: Stack = Stack([0; STACK_SIZE]);
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            let stack_start = VirtAddr::from_ptr(&raw const STACK);
 
             // returns the highest address of the stack because the stack grows downwards
-            stack_start + STACK_SIZE
-        };
-
-        tss.interrupt_stack_table[TIMER_IST_INDEX as usize] = {
-
-            static mut STACK: Stack = Stack([0; STACK_SIZE]);
-
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-
-            // returns the highest address of the stack because the stack grows downwards
-            stack_start + STACK_SIZE
+            stack_start + STACK_SIZE as u64
         };
 
         tss
@@ -69,13 +57,13 @@ lazy_static! {
     pub static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
 
-        let kernel_code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let kernel_data_selector = gdt.add_entry(Descriptor::kernel_data_segment());
+        let kernel_code_selector = gdt.append(Descriptor::kernel_code_segment());
+        let kernel_data_selector = gdt.append(Descriptor::kernel_data_segment());
 
-        let user_data_selector = gdt.add_entry(Descriptor::user_data_segment());
-        let user_code_selector = gdt.add_entry(Descriptor::user_code_segment());
+        let user_data_selector = gdt.append(Descriptor::user_data_segment());
+        let user_code_selector = gdt.append(Descriptor::user_code_segment());
 
-        let mut tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let mut tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
         tss_selector.set_rpl(PrivilegeLevel::Ring0);
 
         (
@@ -101,11 +89,12 @@ pub struct Selectors {
 
 /// Initialises the GDT and TSS.
 pub fn reload_gdt() {
-    use x86_64::instructions::segmentation::{Segment, CS};
+    use x86_64::instructions::segmentation::{CS, Segment};
     use x86_64::instructions::tables::load_tss;
-    debug::log("Loading GDT and segment registers");
+    logln!("[   ---{:^15}---   ]", "INTERRUPTS");
+    logln!("Loading GDT and segment registers");
     GDT.0.load();
-    debug::log("GDT loaded");
+    logln!("GDT loaded");
     let selector = &GDT.1;
     unsafe {
         CS::set_reg(selector.kernel_code_selector);
@@ -114,5 +103,5 @@ pub fn reload_gdt() {
         DS::set_reg(selector.kernel_data_selector);
         ES::set_reg(selector.kernel_data_selector);
     }
-    debug::log("Segment registers loaded");
+    logln!("Segment registers loaded");
 }

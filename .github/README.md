@@ -9,11 +9,10 @@ If you are interested in contributing to the project, please visit the [Contribu
 The project is divided into multiple folders:
 
 1. [src](src/) contains the main entry point of the kernel.
-2. [rost-lib](rost-lib/) contains the standard library that will be available to all programs written for the OS.
-3. [boot](boot/) contains the settings for building the image with the bootloader, and QEMU settings.
-4. [utils](utils/) contains utility functions, constants and structures that could be used throughout the kernel.
-5. [drivers](drivers/) contains drivers that add extended functionality that is not in the scope of the kernel core.
-6. [kernel](kernel/) contains the core library and functionality.
+2. [boot](boot/) contains the settings for building the image with the bootloader, and QEMU settings.
+3. [utils](utils/) contains utility functions, constants and structures that could be used throughout the kernel.
+4. [drivers](drivers/) contains drivers that add extended functionality that is not in the scope of the kernel core.
+5. [kernel](kernel/) contains the core library and functionality.
 
 ### Requirements
 

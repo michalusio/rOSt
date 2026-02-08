@@ -4,5 +4,6 @@
   },
   "editor.formatOnSave": true,
   "files.autoSave": "afterDelay",
-  "rust-analyzer.checkOnSave.command": "clippy"
+  "rust-analyzer.checkOnSave": true,
+  "rust-analyzer.check.command": "clippy"
 }

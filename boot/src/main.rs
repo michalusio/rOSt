@@ -81,7 +81,7 @@ pub fn create_disk_images(kernel_binary_path: &Path) -> PathBuf {
     build_cmd
         .arg("--kernel-manifest")
         .arg(&kernel_manifest_path);
-    build_cmd.arg("--kernel-binary").arg(&kernel_binary_path);
+    build_cmd.arg("--kernel-binary").arg(kernel_binary_path);
     build_cmd
         .arg("--target-dir")
         .arg(kernel_manifest_path.parent().unwrap().join("target"));

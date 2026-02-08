@@ -1,41 +1,31 @@
-use lazy_static::lazy_static;
-use spin::Mutex;
+use core::fmt::Write;
+
 use uart_16550::SerialPort;
 
-/// Prints to the host through the serial interface.
-#[macro_export]
-macro_rules! serial_print {
-    ($($arg:tt)*) => {
-        $crate::serial::__print(format_args!($($arg)*));
+use crate::{logger::LOGGER, logln};
+
+static mut UART: SerialLogger = SerialLogger(unsafe { SerialPort::new(0x3F8) });
+
+pub fn init_logger() {
+    #[allow(static_mut_refs)]
+    // Safety: We do not touch the UART but by using that reference, so it should be safe.
+    unsafe {
+        UART.init();
+        LOGGER.call_once(|| &mut UART);
     };
+    logln!("Initialized UART logger");
 }
 
-/// Prints to the host through the serial interface, appending a newline.
-#[macro_export]
-macro_rules! serial_println {
-    () => ($crate::serial_print!("\r\n"));
-    ($fmt:expr) => ($crate::serial_print!(concat!($fmt, "\r\n")));
-    ($fmt:expr, $($arg:tt)*) => ($crate::serial_print!(
-        concat!($fmt, "\r\n"), $($arg)*));
+struct SerialLogger(pub SerialPort);
+
+impl SerialLogger {
+    fn init(&mut self) {
+        self.0.init();
+    }
 }
 
-#[doc(hidden)]
-pub fn __print(args: ::core::fmt::Arguments) {
-    use core::fmt::Write;
-    use x86_64::instructions::interrupts;
-
-    interrupts::without_interrupts(|| {
-        SERIAL1
-            .lock()
-            .write_fmt(args)
-            .expect("Printing to serial failed");
-    });
-}
-
-lazy_static! {
-    static ref SERIAL1: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
+impl Write for SerialLogger {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.0.write_str(s)
+    }
 }

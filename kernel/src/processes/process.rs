@@ -1,9 +1,7 @@
-use core::cell::RefCell;
-
 use crate::processes::memory_mapper::get_user_mode_mapping;
-use crate::{debug, init::get_kernel_information};
-use alloc::rc::Rc;
-use internal_utils::get_current_tick;
+use alloc::sync::Arc;
+use internal_utils::{kernel_information::KERNEL_INFORMATION, logln};
+use spin::Mutex;
 use x86_64::{PhysAddr, VirtAddr};
 
 use alloc::vec::Vec;
@@ -25,11 +23,11 @@ pub struct Process {
     /// Is the process a kernel process (should it run in ring 0 or 3?).
     pub kernel_process: bool,
     /// The threads of the process that have not started yet.
-    pub not_started_threads: Vec<Rc<RefCell<Thread>>>,
+    pub not_started_threads: Vec<Arc<Mutex<Thread>>>,
     /// The threads of the process that are eligible to run.
-    pub ready_threads: Vec<Rc<RefCell<Thread>>>,
+    pub ready_threads: Vec<Arc<Mutex<Thread>>>,
     /// The threads of the process that are sleeping.
-    pub sleeping_threads: Vec<Rc<RefCell<Thread>>>,
+    pub sleeping_threads: Vec<Arc<Mutex<Thread>>>,
 }
 
 impl Process {
@@ -48,7 +46,7 @@ impl Process {
     // Then we can load the program and it's data to proper places and create a process out of it.
     pub unsafe fn from_extern(function: extern "C" fn(), id: u64) -> Self {
         let function_pointer = function as *const () as *const u8;
-        let kernel_info = get_kernel_information();
+        let kernel_info = KERNEL_INFORMATION.get().unwrap();
         unsafe {
             let (user_page_map, user_physical_address) =
                 get_user_mode_mapping().expect("Error while creating user mode mapping");
@@ -61,7 +59,7 @@ impl Process {
                     + kernel_info.physical_memory_offset,
             )
             .as_mut_ptr::<u8>();
-            debug::log("Loading program");
+            logln!("Loading program");
 
             virtual_address.copy_from_nonoverlapping(function_pointer, 1024);
 
@@ -69,7 +67,7 @@ impl Process {
                 id,
                 cr3: user_page_map.start_address(),
                 total_ticks: 0,
-                start_tick: get_current_tick(),
+                start_tick: 0, //get_current_tick(),
                 last_tick: 0,
                 kernel_process: false,
                 not_started_threads: Vec::new(),
@@ -80,14 +78,14 @@ impl Process {
     }
 
     /// Updates the sleeping threads, waking them up if they are sleeping for too long.
-    pub fn update_sleeping_threads(this: Rc<RefCell<Process>>) {
-        let mut process = this.borrow_mut();
+    pub fn update_sleeping_threads(this: Arc<Mutex<Process>>) {
+        let mut process = this.lock();
         if process.sleeping_threads.is_empty() {
             return;
         }
         let mut drained = Vec::new();
         process.sleeping_threads.retain(|thread| {
-            let mut borrowed_thread = thread.borrow_mut();
+            let mut borrowed_thread = thread.lock();
             match borrowed_thread.state {
                 ThreadState::Sleeping(ref mut sleep_ticks) => {
                     if *sleep_ticks > 0 {

@@ -1,14 +1,11 @@
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "ata"
 version = "0.1.0"
-edition = "2021"
+edition = { workspace = true }
 
 [dependencies]
-internal_utils = { workspace=true }
-kernel = { workspace=true }
-x86_64 = { workspace=true }
-spin = { workspace=true }
-bitflags = { workspace=true }
-lazy_static = { workspace=true }
+internal_utils = { workspace = true }
+x86_64 = { workspace = true }
+spin = { workspace = true }
+bitflags = { workspace = true }
+lazy_static = { workspace = true }

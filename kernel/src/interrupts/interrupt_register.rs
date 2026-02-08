@@ -1,21 +1,18 @@
+use internal_utils::logln;
 use lazy_static::lazy_static;
 use x86_64::structures::idt::InterruptDescriptorTable;
 
-use crate::{
-    debug,
-    interrupts::{
-        cpu_handlers::{
-            breakpoint_handler, double_fault_handler, general_protection_fault_handler,
-            nmi_handler, page_fault_handler,
-        },
-        pic::InterruptIndex,
-        pic_handlers::{
-            _timer, ata_primary_interrupt_handler, ata_secondary_interrupt_handler,
-            keyboard_interrupt_handler,
-        },
+use crate::interrupts::{
+    cpu_handlers::{
+        breakpoint_handler, double_fault_handler, general_protection_fault_handler, nmi_handler,
+        page_fault_handler,
+    },
+    pic::InterruptIndex,
+    pic_handlers::{
+        ata_primary_interrupt_handler, ata_secondary_interrupt_handler, keyboard_interrupt_handler,
+        timer_interrupt_handler,
     },
 };
-use x86_64::VirtAddr;
 
 lazy_static! {
     /// The IDT used by the OS.
@@ -44,19 +41,16 @@ lazy_static! {
         // ##################
         // # PIC interrupts #
         // ##################
-        unsafe {
-            idt[InterruptIndex::Timer.as_usize()]
-                .set_handler_addr(VirtAddr::from_ptr(_timer as *const ()))
-                .set_stack_index(crate::interrupts::gdt::TIMER_IST_INDEX);
-        }
+        idt[InterruptIndex::Timer.as_u8()]
+            .set_handler_fn(timer_interrupt_handler);
 
-        idt[InterruptIndex::Keyboard.as_usize()]
+        idt[InterruptIndex::Keyboard.as_u8()]
             .set_handler_fn(keyboard_interrupt_handler);
 
-        idt[InterruptIndex::AtaPrimary.as_usize()]
+        idt[InterruptIndex::AtaPrimary.as_u8()]
             .set_handler_fn(ata_primary_interrupt_handler);
 
-        idt[InterruptIndex::AtaSecondary.as_usize()]
+        idt[InterruptIndex::AtaSecondary.as_u8()]
             .set_handler_fn(ata_secondary_interrupt_handler);
 
         idt
@@ -66,5 +60,5 @@ lazy_static! {
 /// Loads the IDT.
 pub fn init_idt() {
     IDT.load();
-    debug::log("IDT loaded");
+    logln!("IDT loaded");
 }

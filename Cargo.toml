@@ -1,30 +1,20 @@
-cargo-features = ["workspace-inheritance"]
-
 [package]
 name = "os"
 version = "0.1.0"
 edition = { workspace=true }
 
-[package.metadata.bootloader]
-map-physical-memory = true
-physical-memory-offset = "0x0000_4000_0000_0000"
-kernel-stack-address = "0x_007F_8000_0000"
-kernel-stack-size = "0x1_4000"
-boot-info-address = "0x_7555_AAAE_0000"
-framebuffer-address = "0x_7F55_AAAA_0000"
-#dynamic-range-start = "0xFFFF_8000_0000_0000" # can't do that cause we don't have the newest shiny version of bootloader
-#kernel is placed at 0x007F_C000_0000, set in target json
+[build-dependencies]
+kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
+bootloader = "0.11.12"
 
 [dependencies]
-internal_utils = { workspace=true }
-kernel = { workspace=true }
-vga = { workspace=true }
-ata = { workspace=true }
-x86_64 = { workspace=true }
-rost-lib = { workspace=true }
-test_framework = { workspace=true }
-bootloader = { workspace=true }
-tinytga = { workspace=true }
+bitflags.workspace = true
+ovmf-prebuilt = "0.2.7"
+
+[profile.dev]
+lto = true
+codegen-units = 1
+incremental = false
 
 [profile.release]
 lto = true
@@ -38,32 +28,29 @@ members = [
     "kernel",
     "drivers/ata",
     "drivers/vga",
-    "rost-lib",
     "test_framework"
 ]
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 internal_utils = { path = "internal_utils"}
 kernel = { path = "kernel" }
 vga = { path = "drivers/vga" }
 ata = { path = "drivers/ata" }
-rost-lib = { path = "rost-lib" }
 test_framework = { path = "test_framework" }
-bitflags = "1.3"
-bootloader = "0.10.12"
-pic8259 = "0.10.2" # interrupt controller
-noto-sans-mono-bitmap = { version = "0.1.5", features = ["size_14"] } # nice bitmap font
-pc-keyboard = "0.5.1" # keyboard scan code converter
-linked_list_allocator = "0.9.1" # allocator implementation
-volatile = "0.4.4" # volatile wrapper to prevent aggressive compiler optimizations
-spin = "0.9.3" # spinlock implementation
-x86_64 = "0.14.9" # configures the serial port, cpu exception table
-tinytga = "0.4.1" # for loading the OS logo
-uart_16550 = "0.2.18" # serial port interface used for sending debug output to the host
-lazy_static = { version = "1.4.0", features = [ "spin_no_std" ]}
+bitflags = "2.10.0"
+bootloader_api = "0.11"
+pic8259 = "0.11.0" # interrupt controller
+noto-sans-mono-bitmap = { version = "0.3.2" } # nice bitmap font
+pc-keyboard = "0.8.0" # keyboard scan code converter
+linked_list_allocator = "0.10.5" # allocator implementation
+spin = "0.10.0" # spinlock implementation
+x86_64 = "0.15.4" # configures the serial port, cpu exception table
+tinytga = "0.5.0" # for loading the OS logo
+uart_16550 = "0.4.0" # serial port interface used for sending debug output to the host
+lazy_static = { version = "1.5.0", features = [ "spin_no_std" ]}
 
 ###################################
 # Register all failing tests here #

@@ -1,6 +1,6 @@
 use core::ops::{Add, Div, Mul, Sub};
 
-use internal_utils::div_255_fast;
+use crate::div_255_fast;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
