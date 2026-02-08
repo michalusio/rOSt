@@ -50,10 +50,10 @@ impl<T: Clone> OnceClone<T> {
     }
 
     pub fn get(&self) -> Option<T> {
-        self.0.get().map(|value| value.clone())
+        self.0.get().cloned()
     }
 
     pub fn call_once<F: FnOnce() -> T>(&self, f: F) {
-        self.0.call_once(|| f());
+        self.0.call_once(f);
     }
 }
