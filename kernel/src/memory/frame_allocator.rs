@@ -124,8 +124,6 @@ impl BitmapFrameAllocator {
                 Size4KiB::SIZE,
             );
 
-            print_frame_memory(&allocator);
-
             allocator
         }
     }
@@ -380,7 +378,7 @@ impl FullFrameAllocator for BitmapFrameAllocator {
 }
 
 #[inline(always)]
-pub fn print_frame_memory(allocator: &BitmapFrameAllocator) {
+pub fn print_frame_memory(allocator: &impl FullFrameAllocator) {
     #[cfg(debug_assertions)]
     {
         use internal_utils::logln;

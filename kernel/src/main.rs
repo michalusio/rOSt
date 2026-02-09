@@ -12,17 +12,14 @@
 #![reexport_test_harness_main = "test_main"]
 extern crate alloc;
 
-use alloc::sync::Arc;
 use bootloader_api::{BootInfo, entry_point};
 use core::panic::PanicInfo;
 use internal_utils::clocks::{self, get_current_tick};
 use internal_utils::kernel_information::KernelInformation;
 use internal_utils::{logln, serial};
 use kernel::addressing::BOOTLOADER_CONFIG;
-use kernel::interrupts::SHOW_CLOCK;
-use kernel::memory::frame_allocator::BitmapFrameAllocator;
-use kernel::{interrupts, memory, syscalls};
-use spin::Mutex;
+use kernel::interrupts::{self, SHOW_CLOCK};
+use kernel::{memory, syscalls};
 
 use core::alloc::Layout;
 
@@ -30,11 +27,8 @@ entry_point!(kernel, config = &BOOTLOADER_CONFIG);
 pub fn kernel(boot_info: &'static mut BootInfo) -> ! {
     serial::init_logger();
     clocks::init_rtc();
-    memory::print_memory_map(&boot_info.memory_regions);
-    memory::save_kernel_memory();
-    let mut allocator = BitmapFrameAllocator::init(boot_info);
-    memory::init(boot_info, &mut allocator);
-    let kernel_info = KernelInformation::new(boot_info, Arc::new(Mutex::new(allocator)));
+    let allocator = memory::init_kernel_memory(boot_info);
+    let kernel_info = KernelInformation::new(boot_info, allocator);
     interrupts::enable();
     syscalls::setup_syscalls();
     ata::init_disks();
