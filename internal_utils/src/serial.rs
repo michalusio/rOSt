@@ -44,18 +44,18 @@ impl Logger for SerialLogger {
             self.0.send(b'>');
             self.0.send(b' ');
             self.0.send(ch);
+            index += 1;
             loop {
-                index += 1;
                 if index >= buffer.len() {
                     return None;
                 }
                 let ch = self.0.receive();
-                if ch == b'\r' {
+                if ch == b'\r' || ch == b'\n' {
                     self.0.send(b'\r');
                     self.0.send(b'\n');
                     buffer[index] = 0;
                     break;
-                } else if ch == b'\x08' {
+                } else if ch == b'\x08' || ch == b'\x7F' {
                     if index > 0 {
                         self.0.send(ch);
                         index -= 1;
@@ -64,6 +64,7 @@ impl Logger for SerialLogger {
                 } else {
                     self.0.send(ch);
                     buffer[index] = ch;
+                    index += 1;
                 }
             }
 
