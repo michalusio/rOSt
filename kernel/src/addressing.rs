@@ -1,11 +1,12 @@
 use bootloader_api::{BootloaderConfig, config::Mapping};
 
 const ADDRESSES: &[u64] = &[
-    0x0000_7FB0_0000_0000,
-    0x0000_7FC0_0000_0000,
-    0x0000_7FD0_0000_0000,
-    0x0000_7FE0_0000_0000,
-    0x0000_7FF0_0000_0000,
+    // right shift avoids a panic on some systems, for some reason...
+    0x0000_7FB0_0000_0000 >> 1,
+    0x0000_7FC0_0000_0000 >> 1,
+    0x0000_7FD0_0000_0000 >> 1,
+    0x0000_7FE0_0000_0000 >> 1,
+    0x0000_7FF0_0000_0000 >> 1,
 ];
 const KERNEL_STACK_SIZE: u64 = 16 * 1024 * 1024; // 16MiB
 pub const HEAP_START: u64 = 0x0000_7FA0_0000_0000;
