@@ -1,7 +1,12 @@
 #![no_std] // no standard library
 #![no_main]
 #![allow(incomplete_features, internal_features)]
-#![feature(generic_const_exprs, core_intrinsics, unsized_const_params)]
+#![feature(
+    generic_const_exprs,
+    core_intrinsics,
+    adt_const_params,
+    unsized_const_params
+)]
 
 extern crate alloc;
 pub mod block_device;

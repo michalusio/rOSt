@@ -30,7 +30,13 @@ fn main() {
     let mut cmd = Command::new("qemu-system-x86_64");
     cmd.arg("-serial").arg("mon:stdio");
     cmd.arg("-display").arg("sdl");
+
+    #[cfg(target_os = "windows")]
     cmd.arg("-machine").arg("accel=whpx,kernel-irqchip=off");
+    #[cfg(target_os = "linux")]
+    //accel=kvm,
+    cmd.arg("-machine").arg("kernel-irqchip=off");
+
     // enable the guest to exit qemu
     cmd.arg("-device")
         .arg("isa-debug-exit,iobase=0xf4,iosize=0x04");
