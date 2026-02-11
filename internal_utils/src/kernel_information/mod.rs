@@ -10,9 +10,11 @@ use crate::{
     kernel_information::{
         frame_allocator::FullFrameAllocator, kernel_frame_buffer::KernelFrameBuffer,
     },
+    logln,
     structures::OnceClone,
 };
 
+pub mod allocator;
 pub mod frame_allocator;
 pub mod kernel_frame_buffer;
 
@@ -55,6 +57,11 @@ impl KernelInformation {
         };
         KERNEL_INFORMATION.call_once(|| kernel_info.clone());
         kernel_info
+    }
+
+    pub fn print(&self) {
+        logln!("[   ---{:^15}---   ]", "KERNEL INFO");
+        logln!();
     }
 }
 

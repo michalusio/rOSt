@@ -1,3 +1,4 @@
+use internal_utils::kernel_information::allocator::ALLOCATOR;
 use x86_64::{
     VirtAddr,
     structures::paging::{
@@ -7,7 +8,7 @@ use x86_64::{
 
 use crate::addressing::{HEAP_SIZE, HEAP_START};
 
-use super::{allocator::ALLOCATOR, frame_allocator::BitmapFrameAllocator};
+use super::frame_allocator::BitmapFrameAllocator;
 
 /// maps the kernels heap memory area to physical addresses
 pub fn init_heap(

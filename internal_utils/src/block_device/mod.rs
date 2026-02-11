@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
 use spin::Mutex;
 
-use crate::structures::OnceLock;
+use crate::{capabilities::Device, structures::OnceLock};
 
 mod traits;
 pub use traits::{BootableBlockDevice, PartitionableBlockDevice};
@@ -10,8 +10,7 @@ pub use capability::{
     BlockDeviceCapabilityMut, BlockDeviceCapabilityRef, BlockDeviceCapabilityRequest,
 };
 
-pub trait BlockDevice: Send {
-    fn name(&self) -> &str;
+pub trait BlockDevice: Device {
     fn read_sector(&self, lba: u64) -> Result<[u8; 512], BlockDeviceError>;
     fn write_sector(&mut self, lba: u64, buffer: &[u8; 512]) -> Result<(), BlockDeviceError>;
 

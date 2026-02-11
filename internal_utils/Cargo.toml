@@ -11,3 +11,4 @@ uart_16550 = { workspace = true }
 tinytga = { workspace = true }
 bitflags = { workspace = true }
 lazy_static = { workspace = true }
+linked_list_allocator = { workspace = true }

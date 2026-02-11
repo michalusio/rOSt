@@ -1,11 +1,8 @@
 use crate::{array_combiner::Combiner, bus::get_disk_name};
 use alloc::{sync::Arc, vec::Vec};
 use internal_utils::{
-    block_device::{
-        BlockDevice, BlockDeviceCapabilityMut, BlockDeviceCapabilityRef,
-        BlockDeviceCapabilityRequest, BlockDeviceError, BootableBlockDevice,
-        PartitionableBlockDevice,
-    },
+    block_device::{BlockDevice, BlockDeviceError, BootableBlockDevice, PartitionableBlockDevice},
+    capabilities::Device,
     has_block_device_capability,
 };
 use spin::Mutex;
@@ -93,11 +90,13 @@ impl ATADisk {
     }
 }
 
-impl BlockDevice for ATADisk {
+impl Device for ATADisk {
     fn name(&self) -> &str {
         get_disk_name(self.bus.lock().primary(), self.master)
     }
+}
 
+impl BlockDevice for ATADisk {
     fn read_sector(&self, lba: u64) -> Result<[u8; 512], BlockDeviceError> {
         self.bus
             .lock()

@@ -26,15 +26,19 @@ macro_rules! gpu_device_capabilities {
 
 #[macro_export]
 macro_rules! has_gpu_device_capability {
-    ( $( $cap:ident ),+ $(,)? ) => {
+    (
+        $( $rq:ident),+ $(,)?
+    ) => {
         fn get_capability(
             &'_ self,
-            request: GPUDeviceCapabilityRequest,
-        ) -> Option<GPUDeviceCapabilityRef<'_>> {
+            request: internal_utils::gpu_device::GPUDeviceCapabilityRequest,
+        ) -> Option<internal_utils::gpu_device::GPUDeviceCapabilityRef<'_>> {
             match request {
                 $(
-                    GPUDeviceCapabilityRequest::$cap => {
-                        Some(GPUDeviceCapabilityRef::$cap(self))
+                    internal_utils::gpu_device::GPUDeviceCapabilityRequest::$rq => {
+                        Some(
+                            internal_utils::gpu_device::GPUDeviceCapabilityRef::$rq(self)
+                        )
                     }
                 )+
                 _ => None,
@@ -43,12 +47,14 @@ macro_rules! has_gpu_device_capability {
 
         fn get_capability_mut(
             &'_ mut self,
-            request: GPUDeviceCapabilityRequest,
-        ) -> Option<GPUDeviceCapabilityMut<'_>> {
+            request: internal_utils::gpu_device::GPUDeviceCapabilityRequest,
+        ) -> Option<internal_utils::gpu_device::GPUDeviceCapabilityMut<'_>> {
             match request {
                 $(
-                    GPUDeviceCapabilityRequest::$cap => {
-                        Some(GPUDeviceCapabilityMut::$cap(self))
+                    internal_utils::gpu_device::GPUDeviceCapabilityRequest::$rq => {
+                        Some(
+                            internal_utils::gpu_device::GPUDeviceCapabilityMut::$rq(self)
+                        )
                     }
                 )+
                 _ => None,

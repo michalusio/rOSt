@@ -1,11 +1,9 @@
 use crate::static_stack::StaticStack;
 use alloc::{boxed::Box, slice};
+use internal_utils::capabilities::Device;
 use internal_utils::gpu_device::{
     ClearableGPUDevice, GPUDevice, ImageGPUDevice, PlaneGPUDevice, Point2D, ShapeGPUDevice,
     TextGPUDevice, VGAColor,
-};
-use internal_utils::gpu_device::{
-    GPUDeviceCapabilityMut, GPUDeviceCapabilityRef, GPUDeviceCapabilityRequest,
 };
 use internal_utils::has_gpu_device_capability;
 use internal_utils::kernel_information::KernelInformation;
@@ -25,6 +23,24 @@ pub struct VGADevice {
     pub height: usize,
     pub stride: usize,
     pixel_buffer: Box<dyn PixelBuffer>,
+}
+
+impl Device for VGADevice {
+    fn name(&self) -> &str {
+        "BIOS Frame Buffer"
+    }
+}
+
+impl GPUDevice for VGADevice {
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    has_gpu_device_capability!(Clearable, Plane, Shape, Text, Image);
 }
 
 impl ClearableGPUDevice for VGADevice {
@@ -299,16 +315,4 @@ impl VGADeviceFactory {
             },
         }
     }
-}
-
-impl GPUDevice for VGADevice {
-    fn width(&self) -> usize {
-        self.width
-    }
-
-    fn height(&self) -> usize {
-        self.height
-    }
-
-    has_gpu_device_capability!(Clearable, Plane, Shape, Text, Image);
 }

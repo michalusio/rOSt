@@ -14,11 +14,11 @@ extern crate alloc;
 
 use bootloader_api::{BootInfo, entry_point};
 use core::panic::PanicInfo;
-use internal_utils::clocks::{self, get_current_tick};
+use internal_utils::clocks::{self};
 use internal_utils::kernel_information::KernelInformation;
 use internal_utils::{logln, serial};
 use kernel::addressing::BOOTLOADER_CONFIG;
-use kernel::interrupts::{self, SHOW_CLOCK};
+use kernel::interrupts::{self};
 use kernel::{memory, syscalls};
 
 use core::alloc::Layout;
@@ -39,14 +39,6 @@ pub fn kernel(boot_info: &'static mut BootInfo) -> ! {
     //#[cfg(not(test))]
     //kernel_main(kernel_info);
 
-    let clock = get_current_tick();
-    loop {
-        if get_current_tick() - clock > 1_000_000 {
-            break;
-        }
-    }
-
-    *SHOW_CLOCK.lock() = true;
     internal_utils::hlt_loop();
 }
 

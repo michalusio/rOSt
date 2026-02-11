@@ -1,4 +1,3 @@
-mod allocator;
 mod debug;
 mod frame_allocator;
 mod heap;
@@ -6,9 +5,7 @@ mod memory_init;
 mod page_table;
 use alloc::sync::Arc;
 use bootloader_api::BootInfo;
-use internal_utils::{
-    display::format_size, kernel_information::frame_allocator::FullFrameAllocator, logln,
-};
+use internal_utils::kernel_information::frame_allocator::{FullFrameAllocator, print_memory};
 use memory_init::init_page_tables;
 
 use lazy_static::lazy_static;
@@ -20,10 +17,7 @@ use x86_64::{
 };
 
 use crate::memory::{
-    allocator::ALLOCATOR,
-    debug::print_memory_map,
-    frame_allocator::{BitmapFrameAllocator, print_frame_memory},
-    heap::init_heap,
+    debug::print_memory_map, frame_allocator::BitmapFrameAllocator, heap::init_heap,
     page_table::MEMORY_MAPPER,
 };
 
@@ -44,19 +38,11 @@ pub fn init_kernel_memory(
     let mut mapper = MEMORY_MAPPER.lock();
     init_heap(mapper.as_mut().unwrap(), &mut allocator).expect("heap initialization failed");
 
-    print_frame_memory(&allocator);
+    let allocator = Arc::new(Mutex::new(allocator));
 
-    let (used, size) = {
-        let heap_allocator = ALLOCATOR.lock();
-        (heap_allocator.used(), heap_allocator.size())
-    };
-    logln!(
-        "Allocator memory: {:>4}/{:>4}",
-        format_size(used as u64),
-        format_size(size as u64)
-    );
+    print_memory(allocator.clone());
 
-    Arc::new(Mutex::new(allocator))
+    allocator
 }
 
 /// Switches the paging table used to the kernel's paging table.

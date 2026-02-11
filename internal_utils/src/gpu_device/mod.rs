@@ -12,12 +12,12 @@ mod capability;
 pub use capability::{GPUDeviceCapabilityMut, GPUDeviceCapabilityRef, GPUDeviceCapabilityRequest};
 
 mod traits;
-use crate::structures::OnceMutex;
+use crate::{capabilities::Device, structures::OnceMutex};
 pub use traits::{
     ClearableGPUDevice, ImageGPUDevice, PlaneGPUDevice, ShapeGPUDevice, TextGPUDevice,
 };
 
-pub trait GPUDevice: Send {
+pub trait GPUDevice: Device {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
 

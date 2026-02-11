@@ -8,8 +8,11 @@
     unsized_const_params
 )]
 
+use core::arch::asm;
+
 extern crate alloc;
 pub mod block_device;
+pub mod capabilities;
 pub mod clocks;
 pub mod display;
 pub mod gpu_device;
@@ -17,6 +20,7 @@ pub mod kernel_information;
 pub mod logger;
 pub mod port_extensions;
 pub mod serial;
+mod ikd;
 pub mod structures;
 
 #[macro_export]
@@ -53,6 +57,20 @@ pub fn div_255_fast(x: u16) -> u8 {
 /// Endless loop calling halt continuously.
 pub fn hlt_loop() -> ! {
     loop {
+        try_serial_read!(|command| {
+            ikd::parse_command(command);
+        });
         x86_64::instructions::hlt();
+    }
+}
+
+pub fn exit_qemu() -> ! {
+    unsafe {
+        asm!(
+            "out dx, eax",
+            in("dx") 0xf4u16,
+            in("eax") 0,
+            options(noreturn, nostack)
+        );
     }
 }

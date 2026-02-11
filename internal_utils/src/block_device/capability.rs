@@ -1,7 +1,7 @@
 use crate::block_device::{BootableBlockDevice, PartitionableBlockDevice};
 
 macro_rules! block_device_capabilities {
-    ( $( $cap:ident => $trait:ident ),+ $(,)? ) => {
+    ( $( $cap:ident => $tr:ident ),+ $(,)? ) => {
         #[non_exhaustive]
         #[repr(u8)]
         pub enum BlockDeviceCapabilityRequest {
@@ -11,28 +11,32 @@ macro_rules! block_device_capabilities {
         #[non_exhaustive]
         #[repr(C)]
         pub enum BlockDeviceCapabilityRef<'a> {
-            $( $cap(&'a dyn $trait) ),+
+            $( $cap(&'a dyn $tr) ),+
         }
 
         #[non_exhaustive]
         #[repr(C)]
         pub enum BlockDeviceCapabilityMut<'a> {
-            $( $cap(&'a mut dyn $trait) ),+
+            $( $cap(&'a mut dyn $tr) ),+
         }
     };
 }
 
 #[macro_export]
 macro_rules! has_block_device_capability {
-    ( $( $cap:ident ),+ $(,)? ) => {
+    (
+        $( $rq:ident),+ $(,)?
+    ) => {
         fn get_capability(
             &'_ self,
-            request: BlockDeviceCapabilityRequest,
-        ) -> Option<BlockDeviceCapabilityRef<'_>> {
+            request: internal_utils::block_device::BlockDeviceCapabilityRequest,
+        ) -> Option<internal_utils::block_device::BlockDeviceCapabilityRef<'_>> {
             match request {
                 $(
-                    BlockDeviceCapabilityRequest::$cap => {
-                        Some(BlockDeviceCapabilityRef::$cap(self))
+                    internal_utils::block_device::BlockDeviceCapabilityRequest::$rq => {
+                        Some(
+                            internal_utils::block_device::BlockDeviceCapabilityRef::$rq(self)
+                        )
                     }
                 )+
                 _ => None,
@@ -41,12 +45,14 @@ macro_rules! has_block_device_capability {
 
         fn get_capability_mut(
             &'_ mut self,
-            request: BlockDeviceCapabilityRequest,
-        ) -> Option<BlockDeviceCapabilityMut<'_>> {
+            request: internal_utils::block_device::BlockDeviceCapabilityRequest,
+        ) -> Option<internal_utils::block_device::BlockDeviceCapabilityMut<'_>> {
             match request {
                 $(
-                    BlockDeviceCapabilityRequest::$cap => {
-                        Some(BlockDeviceCapabilityMut::$cap(self))
+                    internal_utils::block_device::BlockDeviceCapabilityRequest::$rq => {
+                        Some(
+                            internal_utils::block_device::BlockDeviceCapabilityMut::$rq(self)
+                        )
                     }
                 )+
                 _ => None,
