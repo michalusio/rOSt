@@ -43,7 +43,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install rust
-        run: rustup upgrade && cargo check --target x86_64-unknown-none
+        run: rustup upgrade && rustup component add llvm-tools-preview
 
       - name: Install required lint crates
         run: cargo install clippy-sarif sarif-fmt
@@ -78,7 +78,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install rust
-        run: rustup upgrade && cargo check --target x86_64-unknown-none
+        run: rustup upgrade && rustup component add llvm-tools-preview
 
       - name: Set up QEMU
         run: sudo apt-get install qemu-system-x86
@@ -104,7 +104,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install rust
-        run: rustup upgrade && cargo check --target x86_64-unknown-none
+        run: rustup upgrade && rustup component add llvm-tools-preview
 
       - name: Build
         run: cargo build --verbose
