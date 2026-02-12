@@ -10,7 +10,7 @@ pub trait HexNumber {
 
 impl HexNumber for PhysAddr {
     fn to_separated_hex(self) -> String {
-        let hex = format!("{:16X}", self);
+        let hex = format!("{:016X}", self);
         format!(
             "PhysAddr: 0x{}_{}_{}_{}",
             &hex[0..4],
@@ -34,7 +34,7 @@ impl HexNumber for PhysAddr {
 
 impl HexNumber for VirtAddr {
     fn to_separated_hex(self) -> String {
-        let hex = format!("{:16X}", self);
+        let hex = format!("{:016X}", self);
         format!(
             "VirtAddr: 0x{}_{}_{}_{}",
             &hex[0..4],

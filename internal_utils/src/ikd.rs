@@ -1,8 +1,11 @@
 use core::str::SplitWhitespace;
 
+use alloc::string::String;
+
 use crate::{
-    kernel_information::{KERNEL_INFORMATION, KernelInformation, frame_allocator::print_memory},
-    logln,
+    clocks::{get_current_tick, get_current_time},
+    kernel_information::{KERNEL_INFORMATION, frame_allocator::print_memory},
+    log, logln,
 };
 
 pub fn parse_command(command: &str) {
@@ -26,6 +29,7 @@ static COMMANDS: &[(&str, StaticFunction)] = &[
     ("memory", &memory),
     ("exit", &exit_qemu),
     ("kernel", &kernel),
+    ("clocks", &clocks),
 ];
 
 fn help(args: Arguments) {
@@ -47,9 +51,9 @@ fn memory(args: Arguments) {
             "view" | "viewp" => {
                 if let Some((from, to)) = get_from_to(args) {
                     if subcommand == "view" {
-                        view_memory_slice(from, to, kernel_info);
+                        view_memory_slice(from, to, 0);
                     } else {
-                        view_physical_memory_slice(from, to, kernel_info);
+                        view_memory_slice(from, to, kernel_info.physical_memory_offset);
                     }
                 } else {
                     logln!("You need to pass a from:to range");
@@ -59,9 +63,15 @@ fn memory(args: Arguments) {
         }
     } else {
         logln!("memory subcommands:");
-        logln!("- info | Shows memory information");
-        logln!("- view from:to | Shows a slice of virtual memory in a hex view");
-        logln!("- viewp from:to | Shows a slice of physical memory in a hex view");
+        logln!("- {:<20} | Shows memory information", "info");
+        logln!(
+            "- {:<20} | Shows a slice of virtual memory in a hex view",
+            "view from:to"
+        );
+        logln!(
+            "- {:<20} | Shows a slice of physical memory in a hex view",
+            "viewp from:to"
+        );
     }
 }
 
@@ -79,7 +89,7 @@ fn kernel(args: Arguments) {
         }
     } else {
         logln!("kernel subcommands:");
-        logln!("- info: Shows kernel information");
+        logln!("- {:<20} | Shows kernel information", "info");
     }
 }
 
@@ -92,10 +102,36 @@ fn get_from_to(args: Arguments) -> Option<(usize, usize)> {
     Some((from, to))
 }
 
-fn view_memory_slice(from: usize, to: usize, kernel_info: KernelInformation) {
-    for slice in (from..to).step_by(16) {
-
+fn view_memory_slice(from: usize, to: usize, offset: u64) {
+    let from = from as u64;
+    let to = to as u64;
+    let mut index: u64 = 0;
+    let mut buffer = ['.'; 16];
+    while index <= to - from {
+        let pointer = (index + from + offset) as *const u8;
+        let value = unsafe { *pointer };
+        log!("{:02X} ", value);
+        let ch = char::from_u32(value as u32)
+            .filter(char::is_ascii_alphanumeric)
+            .unwrap_or('.');
+        buffer[(index & 15) as usize] = ch;
+        index += 1;
+        if index & 15 == 0 {
+            logln!("| {}", String::from_iter(buffer));
+        }
+    }
+    if index & 15 != 0 {
+        logln!(
+            "| {}",
+            String::from_iter(buffer.iter().take((index & 15) as usize))
+        );
     }
 }
 
-fn view_physical_memory_slice(from: usize, to: usize, kernel_info: KernelInformation) {}
+fn clocks(args: Arguments) {
+    if args.next().is_some() {
+        logln!("clocks does not accept arguments");
+    }
+    logln!("Ticks: {}", get_current_tick());
+    logln!("RTC Time: {}", get_current_time());
+}

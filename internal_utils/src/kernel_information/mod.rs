@@ -4,9 +4,10 @@ use bootloader_api::{
     info::{MemoryRegions, Optional},
 };
 use spin::Mutex;
-use x86_64::PhysAddr;
+use x86_64::{PhysAddr, VirtAddr};
 
 use crate::{
+    display::HexNumber,
     kernel_information::{
         frame_allocator::FullFrameAllocator, kernel_frame_buffer::KernelFrameBuffer,
     },
@@ -21,13 +22,13 @@ pub mod kernel_frame_buffer;
 #[derive(Clone)]
 #[repr(C)]
 pub struct KernelInformation {
-    pub bootloader_version: [u16; 3],
+    pub bootloader_version: (u16, u16, u16),
     pub physical_memory_offset: u64,
     pub framebuffer: Optional<KernelFrameBuffer>,
     pub memory_regions: &'static MemoryRegions,
     pub allocator: Arc<Mutex<dyn FullFrameAllocator + Send + Sync>>,
-    /// The start address of the kernel space in all page maps
     pub kernel_start: PhysAddr,
+    pub rsdp: Option<VirtAddr>,
 }
 
 impl KernelInformation {
@@ -35,17 +36,13 @@ impl KernelInformation {
         boot_info: &'static BootInfo,
         allocator: Arc<Mutex<dyn FullFrameAllocator + Send + Sync>>,
     ) -> KernelInformation {
-        let bootloader_version = [
-            boot_info.api_version.version_major(),
-            boot_info.api_version.version_minor(),
-            boot_info.api_version.version_patch(),
-        ];
         let framebuffer = match boot_info.framebuffer.as_ref() {
             Some(framebuffer) => Optional::Some(KernelFrameBuffer::new(framebuffer)),
             None => Optional::None,
         };
+        let v = boot_info.api_version;
         let kernel_info = KernelInformation {
-            bootloader_version,
+            bootloader_version: (v.version_major(), v.version_minor(), v.version_patch()),
             physical_memory_offset: *boot_info
                 .physical_memory_offset
                 .as_ref()
@@ -53,7 +50,8 @@ impl KernelInformation {
             framebuffer,
             memory_regions: &boot_info.memory_regions,
             allocator,
-            kernel_start: PhysAddr::new(0x007F_C000_0000u64),
+            rsdp: boot_info.rsdp_addr.as_ref().copied().map(VirtAddr::new),
+            kernel_start: PhysAddr::new(boot_info.kernel_addr),
         };
         KERNEL_INFORMATION.call_once(|| kernel_info.clone());
         kernel_info
@@ -61,7 +59,38 @@ impl KernelInformation {
 
     pub fn print(&self) {
         logln!("[   ---{:^15}---   ]", "KERNEL INFO");
-        logln!();
+        let v = self.bootloader_version;
+        logln!(
+            "{:<20} {:>26}.{:02}.{:02}",
+            "Bootloader version:",
+            v.0,
+            v.1,
+            v.2
+        );
+        logln!(
+            "{:<20} {:>32}",
+            "Kernel start:",
+            self.kernel_start.to_separated_hex()
+        );
+        if let Some(rsdp) = self.rsdp.as_ref() {
+            logln!("{:<20} {:>32}", "RSDP:", rsdp.to_separated_hex());
+        } else {
+            logln!("{:<20} {:>32}", "RSDP:", "No RSDP found")
+        }
+        logln!(
+            "{:<20} {:>32}",
+            "Physical memory map:",
+            self.physical_memory_offset.to_separated_hex()
+        );
+        if let Some(b) = self.framebuffer.as_ref() {
+            logln!(
+                "{:<20} {:>32}",
+                "Frame buffer:",
+                (b.buffer.get() as u64).to_separated_hex()
+            );
+        } else {
+            logln!("{:<20} {:>32}", "Frame buffer:", "No buffer");
+        }
     }
 }
 
