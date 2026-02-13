@@ -7,6 +7,10 @@ const ADDRESSES: &[u64] = &[
     0xFFFF_8030_0000_0000,
     0xFFFF_8040_0000_0000,
 ];
+
+// We need to not allocate lower memory to keep it for DMA devices
+pub const LOW_MEMORY_LIMIT: u64 = 0x0100_0000; // 16MiB
+
 const KERNEL_STACK_SIZE: u64 = 16 * 1024 * 1024; // 16MiB
 pub const HEAP_START: u64 = 0x0000_7FA0_0000_0000;
 pub const HEAP_SIZE: u64 = 16 * 1024 * 1024; // 16MiB
