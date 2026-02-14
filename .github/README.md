@@ -43,7 +43,7 @@ The command will build the kernel and start up a qemu instance, booting the kern
 ### Architecture
 
 * We want to achieve a Microkernel in the end
-* x86_64 only
+* for now x86_64 only
 
 ### Feature map
 
