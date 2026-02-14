@@ -1,7 +1,13 @@
-#![no_std] // no standard library
+#![no_std]
 #![no_main]
 #![allow(incomplete_features, internal_features)]
-#![feature(abi_x86_interrupt, generic_const_exprs, core_intrinsics)]
+#![feature(
+    custom_test_frameworks,
+    abi_x86_interrupt,
+    generic_const_exprs,
+    core_intrinsics,
+    alloc_error_handler
+)]
 
 extern crate alloc;
 

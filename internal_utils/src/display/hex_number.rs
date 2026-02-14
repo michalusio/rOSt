@@ -1,7 +1,7 @@
 use alloc::{format, string::String};
 use x86_64::{PhysAddr, VirtAddr};
 
-use crate::log;
+use crate::{log, structures::Permanent};
 
 pub trait HexNumber {
     fn to_separated_hex(self) -> String;
@@ -29,6 +29,15 @@ impl HexNumber for PhysAddr {
         log!("{:04X}", (value >> 16) & 0xFFFF);
         log!("_");
         log!("{:04X}", value & 0xFFFF);
+    }
+}
+
+impl HexNumber for Permanent<*mut u8> {
+    fn to_separated_hex(self) -> String {
+        VirtAddr::new(self.get() as u64).to_separated_hex()
+    }
+    fn log_to_separated_hex(self) {
+        VirtAddr::new(self.get() as u64).log_to_separated_hex()
     }
 }
 
