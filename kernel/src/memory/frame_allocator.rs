@@ -76,12 +76,14 @@ impl BitmapFrameAllocator {
         let four_kilo_frame = unsafe {
             VirtAddr::new(four_kilobytes_frames_bitflag.start_address().as_u64() + pmo)
                 .as_mut_ptr::<[u64; 262144]>()
-                .as_mut_unchecked()
+                .as_mut()
+                .unwrap()
         };
         let two_mega_frame = unsafe {
             VirtAddr::new(two_megabyte_frames_bitflag.start_address().as_u64() + pmo)
                 .as_mut_ptr::<[u64; 512]>()
-                .as_mut_unchecked()
+                .as_mut()
+                .unwrap()
         };
 
         logln!("Clearing the allocation bitmaps");
