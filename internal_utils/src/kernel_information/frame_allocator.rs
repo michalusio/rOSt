@@ -11,10 +11,13 @@ pub trait FullFrameAllocator:
     + FrameDeallocator<Size2MiB>
 {
     /// Returns total memory available in the system.
-    fn get_total_memory_size(&self) -> u64;
+    fn get_total_usable_memory(&self) -> u64;
 
     /// Returns the amount of memory free to use.
     fn get_free_memory_size(&self) -> u64;
+
+    // Returns the amount of memory free to use for DMA.
+    fn get_free_dma_memory(&self) -> u64;
 
     /// Returns the number of free 4K frames.
     fn get_free_4k_frames(&self) -> u64;
@@ -47,7 +50,7 @@ pub fn print_frame_memory(allocator: Arc<Mutex<dyn FullFrameAllocator + Send + S
         let locked = allocator.lock();
         logln!("[   ---{:^15}---   ]", "FRAME ALLOCATOR");
         {
-            let mut size = locked.get_total_memory_size();
+            let mut size = locked.get_total_usable_memory();
             let mut size_format = "B";
             if size >= 2 * 1024 {
                 if size < 2 * 1024 * 1024 {
@@ -79,6 +82,28 @@ pub fn print_frame_memory(allocator: Arc<Mutex<dyn FullFrameAllocator + Send + S
                 }
             }
             logln!("{:<15}{:>10}{:>4}", "Free memory:", size, size_format);
+        }
+        {
+            let mut low_memory = locked.get_free_dma_memory();
+            let mut size_format = "B";
+            if low_memory >= 2 * 1024 {
+                if low_memory < 2 * 1024 * 1024 {
+                    low_memory /= 1024;
+                    size_format = "KiB";
+                } else if low_memory < 2 * 1024 * 1024 * 1024 {
+                    low_memory /= 1024 * 1024;
+                    size_format = "MiB";
+                } else {
+                    low_memory /= 1024 * 1024 * 1024;
+                    size_format = "GiB";
+                }
+            }
+            logln!(
+                "{:<16}{:>9}{:>4}",
+                "Free DMA memory:",
+                low_memory,
+                size_format
+            );
         }
         {
             let frames = locked.get_free_2m_frames();
