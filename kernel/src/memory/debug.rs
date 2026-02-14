@@ -9,8 +9,15 @@ pub fn print_memory_map(memory_map: &MemoryRegions) {
         logln!("[   ---{:^15}---   ]", "MEMORY MAP");
         memory_map.iter().for_each(|region| {
             let mut size = region.end - region.start;
-            size /= 1024;
-            let size_format = "KiB";
+            let mut size_format = "  B";
+            if size > 4096 {
+                size /= 1024;
+                size_format = "KiB";
+                if size > 4096 {
+                    size /= 1024;
+                    size_format = "MiB";
+                }
+            }
             log!(
                 "{:28} - {:>6}{:>4}  (",
                 decode_memory_kind(region.kind),

@@ -6,9 +6,9 @@ pub use hex_number::HexNumber;
 /// Formats the size in bytes to a human readable string.
 pub fn format_size(bytes: u64) -> String {
     match bytes {
-        b if b < KIB => format!("{} B", b),
-        b if b < MIB => format!("{} KiB", b / KIB),
-        b if b < GIB => format!("{} MiB", b / MIB),
+        b if b < 4 * KIB => format!("{} B", b),
+        b if b < 4 * MIB => format!("{} KiB", b / KIB),
+        b if b < 4 * GIB => format!("{} MiB", b / MIB),
         b => format!("{} GiB", b / GIB),
     }
 }
