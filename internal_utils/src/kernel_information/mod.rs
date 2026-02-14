@@ -4,7 +4,7 @@ use bootloader_api::{
     info::{MemoryRegions, Optional},
 };
 use spin::Mutex;
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::PhysAddr;
 
 use crate::{
     display::HexNumber,
@@ -28,7 +28,7 @@ pub struct KernelInformation {
     pub memory_regions: &'static MemoryRegions,
     pub allocator: Arc<Mutex<dyn FullFrameAllocator + Send + Sync>>,
     pub kernel_start: PhysAddr,
-    pub rsdp: Option<VirtAddr>,
+    pub rsdp: Option<PhysAddr>,
 }
 
 impl KernelInformation {
@@ -50,7 +50,7 @@ impl KernelInformation {
             framebuffer,
             memory_regions: &boot_info.memory_regions,
             allocator,
-            rsdp: boot_info.rsdp_addr.as_ref().copied().map(VirtAddr::new),
+            rsdp: boot_info.rsdp_addr.as_ref().copied().map(PhysAddr::new),
             kernel_start: PhysAddr::new(boot_info.kernel_addr),
         };
         KERNEL_INFORMATION.call_once(|| kernel_info.clone());
@@ -86,7 +86,7 @@ impl KernelInformation {
             logln!(
                 "{:<20} {:>32}",
                 "Frame buffer:",
-                (b.buffer.get() as u64).to_separated_hex()
+                b.buffer.to_separated_hex()
             );
         } else {
             logln!("{:<20} {:>32}", "Frame buffer:", "No buffer");

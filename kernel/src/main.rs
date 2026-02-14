@@ -1,4 +1,4 @@
-#![no_std] // no standard library
+#![no_std]
 #![no_main]
 #![allow(incomplete_features, internal_features)]
 #![feature(

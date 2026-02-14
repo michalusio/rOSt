@@ -5,7 +5,8 @@
     generic_const_exprs,
     core_intrinsics,
     adt_const_params,
-    unsized_const_params
+    unsized_const_params,
+    never_type
 )]
 
 use core::arch::asm;
@@ -16,11 +17,11 @@ pub mod capabilities;
 pub mod clocks;
 pub mod display;
 pub mod gpu_device;
+mod ikd;
 pub mod kernel_information;
 pub mod logger;
 pub mod port_extensions;
 pub mod serial;
-mod ikd;
 pub mod structures;
 
 #[macro_export]
@@ -54,12 +55,26 @@ pub fn div_255_fast(x: u16) -> u8 {
 }
 
 #[inline(always)]
-/// Endless loop calling halt continuously.
+/// Endless IKD loop calling halt continuously.
 pub fn hlt_loop() -> ! {
     loop {
+        hlt_loop_exitable();
+    }
+}
+
+#[inline(always)]
+/// Endless IKD loop calling halt continuously.
+/// This version is exitable using an IKD command.
+pub fn hlt_loop_exitable() {
+    logln!("Beginning halt loop");
+    loop {
+        let mut exit = false;
         try_serial_read!(|command| {
-            ikd::parse_command(command);
+            exit = ikd::parse_command(command);
         });
+        if exit {
+            break;
+        }
         x86_64::instructions::hlt();
     }
 }

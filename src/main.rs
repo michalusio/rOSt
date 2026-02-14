@@ -28,14 +28,20 @@ fn main() {
     };
 
     let mut cmd = Command::new("qemu-system-x86_64");
+
+    // Memory size
+    cmd.arg("-m").arg("1G");
+
+    // serial IO with passing the Ctrl+C to QEMU
     cmd.arg("-serial").arg("mon:stdio");
+
+    // VGA monitor
     cmd.arg("-display").arg("sdl");
 
     #[cfg(target_os = "windows")]
     cmd.arg("-machine").arg("accel=whpx,kernel-irqchip=off");
     #[cfg(target_os = "linux")]
-    //accel=kvm,
-    cmd.arg("-machine").arg("kernel-irqchip=off");
+    cmd.arg("-machine").arg("kernel-irqchip=off"); //accel=kvm
 
     // enable the guest to exit qemu
     cmd.arg("-device")
