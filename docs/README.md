@@ -1,4 +1,5 @@
 # rOSt, a 64-Bit Rust operating system
+
 [![Build the project](https://github.com/michalusio/rOSt/actions/workflows/rust-pr.yml/badge.svg?branch=main)](https://github.com/michalusio/rOSt/actions/workflows/rust-pr.yml)
 ![Rust nightly](https://img.shields.io/badge/status-nightly-important)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -34,6 +35,7 @@ cargo run bios
 ```
 
 Or if you want to run an UEFI image:
+
 ```bash
 cargo run uefi
 ```
@@ -42,8 +44,8 @@ The command will build the kernel and start up a qemu instance, booting the kern
 
 ### Architecture
 
-* We want to achieve a Microkernel in the end
-* for now x86_64 only
+- We want to achieve a Microkernel in the end
+- for now x86_64 only
 
 ### Feature map
 
@@ -53,80 +55,81 @@ Legend:
 ⭕ - Not Done Yet
 ❌ - Probably won't be supported
 
-* IO
-  * ✔️ Framebuffer output
-  * ✔️ Serial output and input (COM1)
-  * ✔️ Basic logging macros
-  * ⭕ Keyboard input (polling or IRQ-based)
-  * ⭕ PS/2 mouse support
-  * ⭕ Simple shell
-  * ⭕ Pipes and redirection
-  * 🔨 Block device abstraction
-  * Filesystems
-    * ⭕ FAT32
-    * ⭕ ext2
-    * ❌ ext4
-  * ⭕ VFS layer
+- IO
+  - ✔️ Framebuffer output
+  - ✔️ Serial output and input (COM1)
+  - ✔️ Basic logging macros
+  - ⭕ Keyboard input (polling or IRQ-based)
+  - ⭕ PS/2 mouse support
+  - ⭕ Simple shell
+  - ⭕ Pipes and redirection
+  - 🔨 Block device abstraction
+  - ⭕ VFS layer
+  - 🔨 Filesystems
+    - 🔨 Tag-Based Entity System ([TBES](/docs/Tag-Based%20Entity%20System.md))
+    - ⭕ FAT32
+    - ⭕ ext2
+    - ❌ ext4
 
-* Memory
-  * ✔️ Physical frame allocator (2-level bitmap allocator)
-  * 🔨 Paging
-    * ✔️ Higher-half kernel
-    * ⭕ Demand paging
-    * ✔️ Identity mapping during boot
-  * ✔️ Kernel heap allocator
-  * ⭕ Per-process address spaces
-  * ⭕ Copy-on-write
-  * ⭕ Memory-mapped files
-  * ✔️ Guard pages
-  * ⭕ Slab allocator
-  * ⭕ NUMA awareness
-  * ⭕ Huge page support
+- Memory
+  - ✔️ Physical frame allocator (2-level bitmap allocator)
+  - 🔨 Paging
+    - ✔️ Higher-half kernel
+    - ⭕ Demand paging
+    - ✔️ Identity mapping during boot
+  - ✔️ Kernel heap allocator
+  - ⭕ Per-process address spaces
+  - ⭕ Copy-on-write
+  - ⭕ Memory-mapped files
+  - ✔️ Guard pages
+  - ⭕ Slab allocator
+  - ⭕ NUMA awareness
+  - ⭕ Huge page support
 
-* Processes
-  * ⭕ Preemptive scheduler (timer IRQ driven)
-    * ⭕ Round-robin scheduling
-    * ⭕ Priority scheduler
-  * ⭕ User mode (ring 3)
-  * ⭕ Context switching
-  * ⭕ ELF loader
-  * ⭕ Process isolation
-  * ⭕ Threads (kernel + user)
-  * ⭕ IPC primitives (message passing, shared memory)
-  * ⭕ Signals
+- Processes
+  - 🔨 Preemptive scheduler (timer IRQ driven)
+    - ⭕ Round-robin scheduling
+    - ⭕ Priority scheduler
+  - ⭕ User mode (ring 3)
+  - ✔️ Context switching
+  - ⭕ ELF loader
+  - ⭕ Process isolation
+  - ✔️ Threads (kernel + user)
+  - ⭕ IPC primitives (message passing, shared memory)
+  - ⭕ Signals
 
-* Syscalls
-  * ⭕ Syscall entry via `syscall`/`sysret`
-  * ⭕ Basic POSIX-like API
-    * ❌ Full POSIX compliance
-  * ⭕ Capability-based syscall model
-  * ⭕ Async syscall support
-  * ⭕ Stable syscall ABI versioning
+- Syscalls
+  - ⭕ Syscall entry via `syscall`/`sysret`
+  - ⭕ Basic POSIX-like API
+    - ❌ Full POSIX compliance
+  - ⭕ Capability-based syscall model
+  - ⭕ Async syscall support
+  - ⭕ Stable syscall ABI versioning
 
-* Drivers
-  * ✔️ VGA
-  * ✔️ Serial (16550 UART)
-  * 🔨 PIT/APIC timer
-  * 🔨 Keyboard controller
-  * ✔️ ATA PIO
-  * ⭕ APIC / IOAPIC full support
-  * ⭕ HPET timer
-  * ⭕ AHCI / NVMe
-  * ⭕ PCI bus enumeration
-  * ⭕ Network card
-  * ⭕ USB (UHCI/EHCI/XHCI)
-  * ⭕ ACPI parsing
+- Drivers
+  - ✔️ VGA
+  - ✔️ Serial (16550 UART)
+  - 🔨 PIT/APIC timer
+  - 🔨 Keyboard controller
+  - ✔️ ATA PIO
+  - ⭕ APIC / IOAPIC full support
+  - ⭕ HPET timer
+  - ⭕ AHCI / NVMe
+  - ⭕ PCI bus enumeration
+  - ⭕ Network card
+  - ⭕ USB (UHCI/EHCI/XHCI)
+  - ⭕ ACPI parsing
 
-* Interrupts & CPU
-  * ✔️ IDT setup
-  * 🔨 Exception handlers
-  * 🔨 Timer interrupt
-  * 🔨 PIC remapping
-  * ⭕ SMP support
-  * ⭕ Per-core structures
-  * ⭕ TSS with proper privilege stacks
-  * ⭕ Fast syscall path
-  * ⭕ FPU/SIMD context switching
+- Interrupts & CPU
+  - ✔️ IDT setup
+  - ✔️ TSS with proper privilege stacks
+  - 🔨 Exception handlers
+  - 🔨 Timer interrupt
+  - 🔨 PIC remapping
+  - ⭕ FPU/SIMD context switching
+  - ⭕ SMP support
+  - ⭕ Per-core structures
+  - ⭕ Fast syscall path
 
 ### Troubleshooting
 
