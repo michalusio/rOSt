@@ -14,7 +14,7 @@ The project can be contributed to in this way:
 
 ---
 
-![Fork button in the upper-right corner](./fork.PNG)
+<img width="150" height="72" alt="Fork button in the upper-right corner" src="https://github.com/user-attachments/assets/c5d3a4b4-0bed-49dd-ab2c-29f6cffce137" />
 
 ---
 
