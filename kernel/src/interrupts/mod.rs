@@ -11,12 +11,13 @@ pub(crate) mod gdt;
 mod pic_handlers;
 pub use gdt::GDT;
 mod pic;
+pub use pic::{InterruptIndex, disable_irq, enable_irq, irq_enabled};
 pub use pic_handlers::register_key_listener;
 
 use crate::interrupts::{
     gdt::reload_gdt,
     interrupt_register::init_idt,
-    pic::{InterruptIndex, PICS, Pics, enable_irq},
+    pic::{PICS, Pics},
     pic_handlers::enable_keyboard_irq,
 };
 

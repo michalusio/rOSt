@@ -71,3 +71,34 @@ pub fn enable_irq(interrupt: InterruptIndex) {
         pics.write_masks(master_mask, slave_mask);
     }
 }
+
+/// Mask one PIC IRQ line without disturbing the rest of the mask state.
+pub fn disable_irq(interrupt: InterruptIndex) {
+    let irq_line = interrupt.irq_line();
+    let mut pics = PICS.lock().unwrap();
+
+    let [mut master_mask, mut slave_mask] = unsafe { pics.read_masks() };
+
+    if irq_line < 8 {
+        master_mask |= 1 << irq_line;
+    } else {
+        slave_mask |= 1 << (irq_line - 8);
+    }
+
+    unsafe {
+        pics.write_masks(master_mask, slave_mask);
+    }
+}
+
+/// Returns whether a PIC IRQ line is currently unmasked.
+pub fn irq_enabled(interrupt: InterruptIndex) -> bool {
+    let irq_line = interrupt.irq_line();
+    let mut pics = PICS.lock().unwrap();
+    let [master_mask, slave_mask] = unsafe { pics.read_masks() };
+
+    if irq_line < 8 {
+        master_mask & (1 << irq_line) == 0
+    } else {
+        slave_mask & (1 << (irq_line - 8)) == 0
+    }
+}
