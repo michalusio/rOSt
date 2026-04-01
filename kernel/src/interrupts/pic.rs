@@ -21,6 +21,13 @@ impl InterruptIndex {
     pub fn as_u8(self) -> u8 {
         self as u8
     }
+
+    /// Translate an IDT vector back into the PIC IRQ line that raised it.
+    pub fn irq_line(self) -> u8 {
+        self.as_u8()
+            .checked_sub(PIC_1_OFFSET)
+            .expect("PIC-backed interrupts should have an IDT vector at or above PIC_1_OFFSET")
+    }
 }
 
 /// The PICs of the system.
@@ -42,5 +49,25 @@ impl Pics for OnceMutex<ChainedPics> {
 
     unsafe fn notify_end_of_interrupt(&self, interrupt_id: u8) {
         unsafe { self.lock().unwrap().notify_end_of_interrupt(interrupt_id) };
+    }
+}
+
+/// Unmask one PIC IRQ line without disturbing the rest of the mask state.
+pub fn enable_irq(interrupt: InterruptIndex) {
+    let irq_line = interrupt.irq_line();
+    let mut pics = PICS.lock().unwrap();
+
+    let [mut master_mask, mut slave_mask] = unsafe { pics.read_masks() };
+
+    if irq_line < 8 {
+        master_mask &= !(1 << irq_line);
+    } else {
+        // Unmask the IRQ on the slave PIC
+        slave_mask &= !(1 << (irq_line - 8));
+        // Ensure IRQ2 on the master PIC is unmasked for slave communication
+        master_mask &= !(1 << 2);
+    }
+    unsafe {
+        pics.write_masks(master_mask, slave_mask);
     }
 }

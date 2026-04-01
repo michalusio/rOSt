@@ -6,7 +6,8 @@ use x86_64::structures::idt::InterruptStackFrame;
 
 use crate::interrupts::pic::{PICS, Pics};
 use crate::interrupts::{
-    pic::InterruptIndex, pic_handlers::addresses::PS2_INTERRUPT_CONTROLLER_SCAN_CODE_PORT,
+    pic::{InterruptIndex, enable_irq},
+    pic_handlers::addresses::PS2_INTERRUPT_CONTROLLER_SCAN_CODE_PORT,
 };
 
 lazy_static! {
@@ -16,6 +17,11 @@ lazy_static! {
             layouts::Us104Key,
             HandleControl::Ignore
         ));
+}
+
+pub fn enable_keyboard_irq() {
+    // makes IRQ1 visible to the PIC.
+    enable_irq(InterruptIndex::Keyboard);
 }
 
 /// Handles a keyboard interrupt.
