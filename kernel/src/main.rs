@@ -18,6 +18,7 @@ use internal_utils::clocks::{self};
 use internal_utils::kernel_information::KernelInformation;
 use internal_utils::{logln, serial};
 use kernel::addressing::BOOTLOADER_CONFIG;
+use kernel::age_verification;
 use kernel::interrupts::{self};
 use kernel::{hlt_loop_hard, processes};
 use kernel::{memory, syscalls};
@@ -36,6 +37,7 @@ pub fn kernel(boot_info: &'static mut BootInfo) -> ! {
     vga::init_vga(kernel_info);
 
     processes::init_scheduler();
+    age_verification::block_until_age_verified();
     processes::run_processes();
 }
 

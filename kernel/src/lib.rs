@@ -17,6 +17,7 @@ use internal_utils::{logln, serial_read, try_serial_read};
 
 extern crate alloc;
 
+pub mod age_verification;
 pub mod addressing;
 mod ikd;
 pub mod interrupts;
