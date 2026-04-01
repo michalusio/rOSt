@@ -179,9 +179,13 @@ impl ShapeGPUDevice for VGADevice {
     }
 
     fn fill_rectangle(&mut self, x: u16, y: u16, width: u16, height: u16, color: VGAColor<u8>) {
-        let mut index = 0;
-        for _ in y..y + height {
-            for _ in x..x + width {
+        let x = x as usize;
+        let y = y as usize;
+        let height = height as usize;
+
+        for row in y..y + height {
+            let mut index = row * self.stride + x;
+            for _ in 0..width {
                 self.pixel_buffer.put_pixel(index, color);
                 index += 1;
             }
