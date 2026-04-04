@@ -1,0 +1,10 @@
+[package]
+name = "tbes"
+version = "0.1.0"
+edition = { workspace = true }
+
+[dependencies]
+internal_utils = { workspace = true }
+spin = { workspace = true }
+lazy_static = { workspace = true }
+crosstrait = { workspace = true }
