@@ -40,7 +40,6 @@ kernel = { path = "kernel" }
 vga = { path = "drivers/vga" }
 ata = { path = "drivers/ata" }
 tbes = { path = "drivers/tbes" }
-crosstrait = { path = "crosstrait" }
 
 bumpalo = { version = "3.20.2", features = ["collections"] }
 yoke = { version = "0.8.1", features = ["derive"] }
@@ -62,7 +61,10 @@ byteorder = { version = "1.5.0", default-features = false }
 tinytga = { version = "0.5.0" }
 uart_16550 = { version = "0.4.0" }
 lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
-
+crosstrait = { git = "https://github.com/michalusio/crosstrait", branch = "main", default-features = false, features = [
+    "alloc",
+    "global_registry",
+] }
 
 ###################################
 # Register all failing tests here #

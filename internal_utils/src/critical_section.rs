@@ -28,16 +28,6 @@ const LOCK_ALREADY_OWNED: u8 = 2;
 
 unsafe impl critical_section::Impl for RpSpinlockCs {
     unsafe fn acquire() -> u8 {
-        RpSpinlockCs::acquire()
-    }
-
-    unsafe fn release(token: u8) {
-        RpSpinlockCs::release(token);
-    }
-}
-
-impl RpSpinlockCs {
-    unsafe fn acquire() -> u8 {
         // Store the initial interrupt state and current core id in stack variables
         let interrupts_active = are_enabled();
         // We reserved 0 as our `LOCK_UNOWNED` value, so add 1 to core_id so we get 1 for core0, 2 for core1.
@@ -85,7 +75,7 @@ impl RpSpinlockCs {
             // Ensure the compiler doesn't re-order accesses and violate safety here
             core::sync::atomic::compiler_fence(Ordering::SeqCst);
             // Release the spinlock to allow others to enter critical_section again
-            SPIN_LOCK.force_unlock();
+            unsafe { SPIN_LOCK.force_unlock() };
             // Re-enable interrupts if they were enabled when we first called acquire()
             // We only do this on the outermost `critical_section` to ensure interrupts stay disabled
             // for the whole time that we have the lock

@@ -13,3 +13,4 @@ bitflags = { workspace = true }
 lazy_static = { workspace = true }
 linked_list_allocator = { workspace = true }
 crosstrait = { workspace = true }
+critical-section = { version = "1.2.0", features = ["restore-state-u8"] }

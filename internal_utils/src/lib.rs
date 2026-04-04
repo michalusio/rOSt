@@ -24,6 +24,9 @@ pub mod serial;
 pub mod structures;
 pub mod tag_store;
 
+mod critical_section;
+use critical_section as _;
+
 #[inline(always)]
 /// Fast division by 255 using additions and shifts.
 pub fn div_255_fast(x: u16) -> u8 {
