@@ -15,7 +15,8 @@ mod pic;
 use crate::interrupts::{
     gdt::reload_gdt,
     interrupt_register::init_idt,
-    pic::{PICS, Pics},
+    pic::{InterruptIndex, PICS, Pics, enable_irq},
+    pic_handlers::enable_keyboard_irq,
 };
 
 /// Initializes the GDT, IDT and PIC controllers
@@ -23,5 +24,7 @@ pub fn setup() {
     reload_gdt();
     init_idt();
     PICS.initialize();
+    enable_irq(InterruptIndex::Timer);
+    enable_keyboard_irq();
     logln!("Interrupts set up");
 }
