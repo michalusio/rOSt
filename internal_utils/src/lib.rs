@@ -6,7 +6,8 @@
     core_intrinsics,
     adt_const_params,
     unsized_const_params,
-    never_type
+    never_type,
+    unsize
 )]
 
 extern crate alloc;
@@ -21,6 +22,7 @@ pub mod logger;
 pub mod port_extensions;
 pub mod serial;
 pub mod structures;
+pub mod tag_store;
 
 #[inline(always)]
 /// Fast division by 255 using additions and shifts.

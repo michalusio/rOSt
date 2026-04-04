@@ -21,3 +21,5 @@ bitflags = { workspace = true }
 tinytga = { workspace = true }
 vga = { workspace = true }
 ata = { workspace = true }
+tbes = { workspace = true }
+crosstrait = { workspace = true }

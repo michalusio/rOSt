@@ -32,6 +32,7 @@ pub fn kernel(boot_info: &'static mut BootInfo) -> ! {
     let kernel_info = KernelInformation::new(boot_info, allocator);
     interrupts::setup();
     syscalls::setup_syscalls();
+    tbes::init_tag_store();
     ata::init_disks();
     vga::init_vga(kernel_info);
 

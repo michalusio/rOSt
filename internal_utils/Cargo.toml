@@ -12,3 +12,4 @@ tinytga = { workspace = true }
 bitflags = { workspace = true }
 lazy_static = { workspace = true }
 linked_list_allocator = { workspace = true }
+crosstrait = { workspace = true }

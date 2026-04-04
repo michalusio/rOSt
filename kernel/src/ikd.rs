@@ -1,8 +1,15 @@
 use core::{arch::asm, str::SplitWhitespace};
 
+use alloc::collections::btree_map::BTreeMap;
 use alloc::string::String;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use crosstrait::Cast;
 use internal_utils::HexNumber;
 
+use internal_utils::tag_store::{
+    BinaryBoolQueryExpression, BinaryBoolQueryExpressionType, BooleanTag, Query, TAG_STORE,
+};
 use internal_utils::{
     clocks::{get_current_tick, get_current_time},
     kernel_information::{KERNEL_INFORMATION, frame_allocator::print_memory},
@@ -39,6 +46,7 @@ static COMMANDS: &[(&str, StaticFunction)] = &[
     ("scheduler", &scheduler),
     ("clocks", &clocks),
     ("ip", &ip),
+    ("tbes", &tbes),
     ("panic", &panic),
 ];
 
@@ -209,5 +217,72 @@ fn scheduler(args: Arguments) -> bool {
         logln!("- {:<20} | Shows processes", "processes");
         logln!("- {:<20} | Runs the scheduler", "run");
     }
+    false
+}
+
+fn tbes(args: Arguments) -> bool {
+    let store = TAG_STORE.get().unwrap();
+    let tags: Vec<Arc<dyn BooleanTag>> = store
+        .get_all_tags()
+        .into_iter()
+        .filter_map(|o| o.cast().clone())
+        .collect();
+    let mut tag_map = BTreeMap::new();
+    for tag in tags.iter() {
+        tag_map.insert(tag.name(), tag.clone());
+    }
+    logln!("Found {} tags", tag_map.len());
+
+    let mut show_query_plan = false;
+    let checks: Result<Vec<Query>, ()> = args
+        .inspect(|arg| {
+            if *arg == "-q" {
+                show_query_plan = true;
+            }
+        })
+        .filter(|arg| *arg != "-q")
+        .map(|arg| {
+            arg.split_once('=').ok_or(()).and_then(|(name, value)| {
+                match (tag_map.get(name), value.to_ascii_lowercase().as_str()) {
+                    (Some(tag), "true") => Ok(Query::Binary(
+                        BinaryBoolQueryExpression {
+                            first: (*tag).clone(),
+                            second: true,
+                            operation: BinaryBoolQueryExpressionType::EqualTo,
+                        }
+                        .into(),
+                    )),
+                    (Some(tag), "false") => Ok(Query::Binary(
+                        BinaryBoolQueryExpression {
+                            first: (*tag).clone(),
+                            second: false,
+                            operation: BinaryBoolQueryExpressionType::EqualTo,
+                        }
+                        .into(),
+                    )),
+                    (None, _) => {
+                        logln!("Cannot find tag {}", name);
+                        Err(())
+                    }
+                    _ => {
+                        logln!("Tag condition has to be of the form TAG_NAME=TRUE/FALSE");
+                        Err(())
+                    }
+                }
+            })
+        })
+        .collect();
+
+    if let Ok(checks) = checks {
+        let query = Query::And(checks);
+        let (data, plan) = store.query(query);
+        if show_query_plan {
+            logln!("Query plan: {}", plan);
+        }
+        for id in data {
+            logln!("{}", id);
+        }
+    }
+
     false
 }
