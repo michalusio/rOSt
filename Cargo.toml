@@ -66,6 +66,7 @@ crosstrait = { git = "https://github.com/michalusio/crosstrait", branch = "main"
     "global_registry",
 ] }
 
+
 ###################################
 # Register all failing tests here #
 ###################################
