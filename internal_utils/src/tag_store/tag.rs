@@ -8,16 +8,16 @@ pub trait Tag: Send + Sync {
 }
 
 pub trait BooleanTag: Tag {
-    fn add(&self, id: Identity, value: bool);
+    fn add(&self, id: Identity);
     fn get_identities(&self, value: bool) -> BTreeSet<Identity>;
 }
 
 pub trait IntegerTag: Tag {
     fn add(&self, id: Identity, value: u64);
-    fn get_identities(&self, value: u64) -> BTreeSet<Identity>;
+    fn get_identities(&self, value: Option<u64>) -> BTreeSet<Identity>;
 }
 
 pub trait RefTag: Tag {
     fn add(&self, id: Identity, value: Identity);
-    fn get_identities(&self, value: Identity) -> BTreeSet<Identity>;
+    fn get_identities(&self, value: Option<Identity>) -> BTreeSet<Identity>;
 }

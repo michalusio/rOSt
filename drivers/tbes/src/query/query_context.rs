@@ -1,17 +1,14 @@
-use core::iter::*;
+use core::{fmt::Display, iter::*};
 
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{string::String, vec::Vec};
 
 #[derive(Default)]
-pub struct QueryWriter {
+pub struct QueryContext {
     buffer: String,
     open_sections: Vec<&'static str>,
 }
 
-impl QueryWriter {
+impl QueryContext {
     pub fn open_section(&mut self, name: &'static str) {
         let spaces = repeat_n(' ', self.open_sections.len());
         let tag = once('<').chain(name.chars()).chain(once('>'));
@@ -51,8 +48,8 @@ impl QueryWriter {
     }
 }
 
-impl ToString for QueryWriter {
-    fn to_string(&self) -> String {
-        self.buffer.clone()
+impl Display for QueryContext {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.buffer)
     }
 }

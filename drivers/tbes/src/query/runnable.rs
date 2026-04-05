@@ -7,10 +7,10 @@ use internal_utils::tag_store::{
 };
 
 use crate::query::negate::Negatable;
-use crate::{Identity, query::query_writer::QueryWriter};
+use crate::{Identity, query::query_context::QueryContext};
 
 pub trait Runnable {
-    fn run(&self, query_writer: &mut QueryWriter) -> BTreeSet<Identity>;
+    fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity>;
     /// Rewrites self into the Conjunctive normal form query
     fn normalize(self) -> Query;
 }
@@ -90,7 +90,7 @@ impl Runnable for Query {
         }
     }
 
-    fn run(&self, query_writer: &mut QueryWriter) -> BTreeSet<Identity> {
+    fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
         match self {
             Query::And(items) => {
                 if items.len() == 1 {
@@ -169,7 +169,7 @@ impl Runnable for BinaryQueryExpression {
         Query::Binary(self)
     }
 
-    fn run(&self, query_writer: &mut QueryWriter) -> BTreeSet<Identity> {
+    fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
         match self {
             BinaryQueryExpression::Bool(bool_query) => bool_query.run(query_writer),
             BinaryQueryExpression::U64(u64_query) => todo!(),
@@ -183,7 +183,7 @@ impl Runnable for BinaryBoolQueryExpression {
         Query::Binary(BinaryQueryExpression::Bool(self))
     }
 
-    fn run(&self, query_writer: &mut QueryWriter) -> BTreeSet<Identity> {
+    fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
         let value = (self.operation == BinaryBoolQueryExpressionType::EqualTo) ^ !self.second;
         query_writer.item_vec([self.first.name(), "=", if value { "true" } else { "false" }]);
         self.first.get_identities(value)
