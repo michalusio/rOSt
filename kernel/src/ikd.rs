@@ -1,6 +1,7 @@
 use core::{arch::asm, str::SplitWhitespace};
 
-use alloc::collections::btree_map::BTreeMap;
+use alloc::borrow::Cow;
+use alloc::format;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -8,7 +9,8 @@ use crosstrait::Cast;
 use internal_utils::HexNumber;
 
 use internal_utils::tag_store::{
-    BinaryBoolQueryExpression, BinaryBoolQueryExpressionType, BooleanTag, Query, TAG_STORE,
+    BoolQueryExpression, BoolQueryExpressionType, BooleanTag, IntegerTag, Query, QueryOptions,
+    QueryResult, TAG_STORE, U64QueryExpression, U64QueryExpressionType,
 };
 use internal_utils::{
     clocks::{get_current_tick, get_current_time},
@@ -28,7 +30,14 @@ pub fn parse_command(command: &str) -> bool {
         .find(|(prefix, _)| command.starts_with(prefix));
     if let Some((c, f)) = result {
         let mut arguments = command[c.len()..].split_whitespace();
-        f(&mut arguments)
+        let result = f(&mut arguments);
+        match result {
+            Err(s) => {
+                logln!("{}", s);
+                false
+            }
+            Ok(f) => f,
+        }
     } else {
         logln!("Invalid command. Try \"help\".");
         false
@@ -36,7 +45,8 @@ pub fn parse_command(command: &str) -> bool {
 }
 
 type Arguments<'a> = &'a mut SplitWhitespace<'a>;
-type StaticFunction = &'static (dyn (Fn(Arguments) -> bool) + Send + Sync);
+type StaticFunction =
+    &'static (dyn (Fn(Arguments) -> Result<bool, Cow<'static, str>>) + Send + Sync);
 
 static COMMANDS: &[(&str, StaticFunction)] = &[
     ("help", &help),
@@ -50,23 +60,26 @@ static COMMANDS: &[(&str, StaticFunction)] = &[
     ("panic", &panic),
 ];
 
-fn help(args: Arguments) -> bool {
+fn help(args: Arguments) -> Result<bool, Cow<'static, str>> {
     if args.next().is_some() {
-        logln!("help does not accept arguments");
+        return Err("help does not accept arguments".into());
     }
     logln!("Available commands:");
     for (c, _) in COMMANDS {
         logln!("- {}", c);
     }
-    false
+    Ok(false)
 }
 
-fn memory(args: Arguments) -> bool {
+fn memory(args: Arguments) -> Result<bool, Cow<'static, str>> {
     let subcommand = args.next();
     if let Some(subcommand) = subcommand {
         let kernel_info = KERNEL_INFORMATION.get().unwrap();
         match subcommand {
-            "info" => print_memory(kernel_info.allocator),
+            "info" => {
+                print_memory(kernel_info.allocator);
+                Ok(false)
+            }
             "view" | "viewp" | "viewk" => {
                 if let Some((from, to)) = get_from_to(args) {
                     if subcommand == "view" {
@@ -76,11 +89,12 @@ fn memory(args: Arguments) -> bool {
                     } else {
                         view_memory_slice(from, to, addressing::ADDRESSES[3]);
                     }
+                    Ok(false)
                 } else {
-                    logln!("You need to pass a from:to range");
+                    Err("You need to pass a from:to range".into())
                 }
             }
-            _ => logln!("Invalid subcommand"),
+            _ => Err("Invalid subcommand".into()),
         }
     } else {
         logln!("memory subcommands:");
@@ -97,24 +111,24 @@ fn memory(args: Arguments) -> bool {
             "- {:<20} | Shows a slice of kernel memory in a hex view",
             "viewk from:to"
         );
+        Ok(false)
     }
-    false
 }
 
-fn exit(args: Arguments) -> bool {
+fn exit(args: Arguments) -> Result<bool, Cow<'static, str>> {
     let subcommand = args.next();
     if let Some(subcommand) = subcommand {
         match subcommand {
             "qemu" => exit_qemu(),
-            "ikd" => return true,
-            _ => logln!("Invalid subcommand"),
+            "ikd" => Ok(true),
+            _ => Err("Invalid subcommand".into()),
         }
     } else {
         logln!("exit subcommands:");
         logln!("- {:<20} | Closes QEMU (if applicable)", "qemu");
         logln!("- {:<20} | Closes IKD (if possible)", "ikd");
+        Ok(false)
     }
-    false
 }
 
 fn exit_qemu() -> ! {
@@ -128,19 +142,22 @@ fn exit_qemu() -> ! {
     }
 }
 
-fn kernel(args: Arguments) -> bool {
+fn kernel(args: Arguments) -> Result<bool, Cow<'static, str>> {
     let subcommand = args.next();
     if let Some(subcommand) = subcommand {
         let kernel_info = KERNEL_INFORMATION.get().unwrap();
         match subcommand {
-            "info" => kernel_info.print(),
-            _ => logln!("Invalid subcommand"),
+            "info" => {
+                kernel_info.print();
+                Ok(false)
+            }
+            _ => Err("Invalid subcommand".into()),
         }
     } else {
         logln!("kernel subcommands:");
         logln!("- {:<20} | Shows kernel information", "info");
+        Ok(false)
     }
-    false
 }
 
 fn get_from_to(args: Arguments) -> Option<(usize, usize)> {
@@ -181,60 +198,56 @@ fn view_memory_slice(from: usize, to: usize, offset: u64) {
     }
 }
 
-fn clocks(args: Arguments) -> bool {
+fn clocks(args: Arguments) -> Result<bool, Cow<'static, str>> {
     if args.next().is_some() {
-        logln!("clocks does not accept arguments");
+        Err("clocks does not accept arguments".into())
+    } else {
+        logln!("Ticks: {}", get_current_tick());
+        logln!("RTC Time: {}", get_current_time());
+        Ok(false)
     }
-    logln!("Ticks: {}", get_current_tick());
-    logln!("RTC Time: {}", get_current_time());
-    false
 }
 
-fn ip(args: Arguments) -> bool {
+fn ip(args: Arguments) -> Result<bool, Cow<'static, str>> {
     if args.next().is_some() {
-        logln!("ip does not accept arguments");
+        Err("ip does not accept arguments".into())
+    } else {
+        let ip = read_rip();
+        logln!("Current instruction pointer: {}", ip.to_separated_hex());
+        logln!("Though tbh it's kinda useless");
+        Ok(false)
     }
-    let ip = read_rip();
-    logln!("Current instruction pointer: {}", ip.to_separated_hex());
-    logln!("Though tbh it's kinda useless");
-    false
 }
 
-fn panic(_: Arguments) -> bool {
+fn panic(_: Arguments) -> Result<bool, Cow<'static, str>> {
     panic!("Invoked the panic handler");
 }
 
-fn scheduler(args: Arguments) -> bool {
+fn scheduler(args: Arguments) -> Result<bool, Cow<'static, str>> {
     let subcommand = args.next();
     if let Some(subcommand) = subcommand {
         match subcommand {
-            "processes" => SCHEDULER.lock().unwrap().get_processes_and_threads().log(),
+            "processes" => {
+                SCHEDULER.lock().unwrap().get_processes_and_threads().log();
+                Ok(false)
+            }
             "run" => run_processes(),
-            _ => logln!("Invalid subcommand"),
+            _ => Err("Invalid subcommand".into()),
         }
     } else {
         logln!("scheduler subcommands:");
         logln!("- {:<20} | Shows processes", "processes");
         logln!("- {:<20} | Runs the scheduler", "run");
+        Ok(false)
     }
-    false
 }
 
-fn tbes(args: Arguments) -> bool {
+fn tbes(args: Arguments) -> Result<bool, Cow<'static, str>> {
     let store = TAG_STORE.get().unwrap();
-    let tags: Vec<Arc<dyn BooleanTag>> = store
-        .get_all_tags()
-        .into_iter()
-        .filter_map(|o| o.cast().clone())
-        .collect();
-    let mut tag_map = BTreeMap::new();
-    for tag in tags.iter() {
-        tag_map.insert(tag.name(), tag.clone());
-    }
-    logln!("Found {} tags", tag_map.len());
+    let tag_map = store.get_all_tags();
 
     let mut show_query_plan = false;
-    let checks: Result<Vec<Query>, ()> = args
+    let checks: Vec<Query> = args
         .inspect(|arg| {
             if *arg == "-q" {
                 show_query_plan = true;
@@ -242,47 +255,75 @@ fn tbes(args: Arguments) -> bool {
         })
         .filter(|arg| *arg != "-q")
         .map(|arg| {
-            arg.split_once('=').ok_or(()).and_then(|(name, value)| {
-                match (tag_map.get(name), value.to_ascii_lowercase().as_str()) {
-                    (Some(tag), "true") => Ok(Query::Binary(
-                        BinaryBoolQueryExpression {
-                            first: (*tag).clone(),
-                            second: true,
-                            operation: BinaryBoolQueryExpressionType::EqualTo,
+            arg.split_once(['=', '>', '<'])
+                .ok_or(Cow::Borrowed("Tag condition has to be of the form TAG_NAME=VALUE"))
+                .map(|(name, value)| if let Some(stripped) = value.strip_prefix('=') {
+                    (name, stripped)
+                } else {
+                    (name, value)
+                })
+                .and_then(|(name, value)| match tag_map.get(name) {
+                    Some(tag) => {
+                        let bt: Option<Arc<dyn BooleanTag>> = tag.clone().cast();
+                        let it: Option<Arc<dyn IntegerTag>> = tag.clone().cast();
+                        if let Some(boolean_tag) = bt {
+                            if !arg.contains('=') || arg.contains(['<', '>']) {
+                                Err("Boolean Tag condition has to be of the form TAG_NAME=TRUE/FALSE".into())
+                            } else if value.eq_ignore_ascii_case("true") {
+                                Ok(BoolQueryExpression {
+                                    first: boolean_tag,
+                                    operation: BoolQueryExpressionType::EqualTo,
+                                    second: true
+                                }.into())
+                            } else if value.eq_ignore_ascii_case("false") {
+                                Ok(BoolQueryExpression {
+                                    first: boolean_tag,
+                                    operation: BoolQueryExpressionType::EqualTo,
+                                    second: false
+                                }.into())
+                            } else {
+                                Err("Boolean Tag condition has to be of the form TAG_NAME=TRUE/FALSE".into())
+                            }
+                        } else if let Some(int_tag) = it {
+                            let integer = value.parse::<u64>();
+                            match integer {
+                                Ok(int) => Ok(U64QueryExpression {
+                                    first: int_tag,
+                                    operation: match (arg.contains('='), arg.contains('>'), arg.contains('<')) {
+                                        (true, true, false) => U64QueryExpressionType::GreaterThanOrEqualTo,
+                                        (true, false, true) => U64QueryExpressionType::LessThanOrEqualTo,
+                                        (false, true, true) => U64QueryExpressionType::NotEqualTo,
+                                        (false, true, false) => U64QueryExpressionType::GreaterThan,
+                                        (false, false, true) => U64QueryExpressionType::LessThan,
+                                        _ => U64QueryExpressionType::EqualTo
+                                    },
+                                    second: int
+                                }.into()),
+                                Err(_) => Err("Integer Tag condition has to be of the form TAG_NAME=<integer>".into()),
+                            }
+                        } else {
+                            Err("You cannot query ref tags using IKD (yet!)".into())
                         }
-                        .into(),
-                    )),
-                    (Some(tag), "false") => Ok(Query::Binary(
-                        BinaryBoolQueryExpression {
-                            first: (*tag).clone(),
-                            second: false,
-                            operation: BinaryBoolQueryExpressionType::EqualTo,
-                        }
-                        .into(),
-                    )),
-                    (None, _) => {
-                        logln!("Cannot find tag {}", name);
-                        Err(())
+                    },
+                    None => {
+                        let s = format!("Cannot find tag {}", name);
+                        Err(s.into())
                     }
-                    _ => {
-                        logln!("Tag condition has to be of the form TAG_NAME=TRUE/FALSE");
-                        Err(())
-                    }
-                }
-            })
+                })
         })
-        .collect();
+        .map(|q| q.map(Query::Binary))
+        .collect::<Result<_, Cow<'static, str>>>()?;
 
-    if let Ok(checks) = checks {
-        let query = Query::And(checks);
-        let (data, plan) = store.query(query);
-        if show_query_plan {
-            logln!("Query plan: {}", plan);
-        }
-        for id in data {
-            logln!("{}", id);
-        }
+    let query = Query::And(checks);
+    let QueryResult {
+        identities,
+        query_plan,
+    } = store.query(query, QueryOptions { show_query_plan });
+    if let Some(plan) = query_plan {
+        logln!("Query plan: {}", plan);
     }
-
-    false
+    for id in identities {
+        logln!("{}", id);
+    }
+    Ok(false)
 }

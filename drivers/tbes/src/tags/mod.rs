@@ -6,18 +6,18 @@ use crate::{
     tags::{boolean_tag::BooleanTagImpl, integer_tag::IntegerTagImpl, ref_tag::RefTagImpl},
 };
 use alloc::{
+    borrow::ToOwned,
     boxed::Box,
-    collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+    collections::btree_map::BTreeMap,
     string::{String, ToString},
     sync::Arc,
-    vec::Vec,
 };
 use crosstrait::Cast;
 use internal_utils::{
     logln,
     tag_store::{
-        BooleanTag, Entity, IntegerTag, KERNEL_IDENTITY, OWNER_TAG_IDENTITY, Query, RefTag,
-        TAG_STORE, TAG_TAG_IDENTITY, TIMESTAMP_TAG_IDENTITY, Tag, TagStore,
+        BooleanTag, Entity, IntegerTag, KERNEL_IDENTITY, OWNER_TAG_IDENTITY, Query, QueryOptions,
+        QueryResult, RefTag, TAG_STORE, TAG_TAG_IDENTITY, TIMESTAMP_TAG_IDENTITY, Tag, TagStore,
     },
 };
 use spin::RwLock;
@@ -42,6 +42,7 @@ impl TBESTagStore {
         let tag_tag = Self::add_tag_tag(&store);
         Self::add_owner_tag(&store);
         Self::add_timestamp_tag(&store);
+        Self::add_kernel_user(&store);
         Self {
             tag_tag: tag_tag.cast().unwrap(),
             random_store: store,
@@ -116,17 +117,41 @@ impl TBESTagStore {
         store_lock.keys().for_each(|id| tt.add(*id, 0));
         store_lock.insert(id, Arc::new(tt));
     }
+
+    fn add_kernel_user(store: &RandomStore) {
+        let user = ();
+        let mut store_lock = store.write();
+        let timestamp_tag: Arc<dyn IntegerTag> = store_lock
+            .get(&TIMESTAMP_TAG_IDENTITY)
+            .unwrap()
+            .clone()
+            .cast()
+            .unwrap();
+        timestamp_tag.add(KERNEL_IDENTITY, 0);
+
+        let owner_tag: Arc<dyn RefTag> = store_lock
+            .get(&OWNER_TAG_IDENTITY)
+            .unwrap()
+            .clone()
+            .cast()
+            .unwrap();
+        owner_tag.add(KERNEL_IDENTITY, KERNEL_IDENTITY);
+
+        store_lock.insert(KERNEL_IDENTITY, Arc::new(user));
+    }
 }
 
 impl TagStore for TBESTagStore {
-    fn query(&self, query: Query) -> (BTreeSet<Identity>, String) {
+    fn query(&self, query: Query, options: QueryOptions) -> QueryResult {
         let mut writer = QueryContext::default();
         let normalized_query = query.normalize();
 
         let set = normalized_query.run(&mut writer);
 
-        let plan = writer.to_string();
-        (set, plan)
+        QueryResult {
+            identities: set,
+            query_plan: options.show_query_plan.then(|| writer.to_string()),
+        }
     }
 
     fn get_tag_tag(&self) -> Arc<dyn BooleanTag> {
@@ -137,18 +162,23 @@ impl TagStore for TBESTagStore {
         self.random_store.read().get(&id).cloned()
     }
 
-    fn get_all_tags(&self) -> Vec<Entity> {
+    fn get_all_tags(&self) -> BTreeMap<String, Entity> {
         let store = self.random_store.read();
-        self.get_tag_tag()
-            .get_identities(true)
-            .iter()
-            .filter_map(|id| store.get(id))
-            .cloned()
-            .collect()
+        BTreeMap::from_iter(
+            self.get_tag_tag()
+                .get_identities(true)
+                .iter()
+                .filter_map(|id| store.get(id))
+                .cloned()
+                .map(|tag| {
+                    let t: Arc<dyn Tag> = tag.clone().cast().unwrap();
+                    (t.name().to_owned(), tag)
+                }),
+        )
     }
 
     fn add_entity(&self, id: Identity, entity: Entity, owner: Identity, timestamp: u64) -> bool {
-        if self.get_entity(id).is_none() {
+        if self.get_entity(owner).is_some() && self.get_entity(id).is_none() {
             let mut store_lock = self.random_store.write();
             {
                 let owner_tag: Arc<dyn RefTag> = store_lock
@@ -161,7 +191,7 @@ impl TagStore for TBESTagStore {
             }
             {
                 let timestamp_tag: Arc<dyn IntegerTag> = store_lock
-                    .get(&OWNER_TAG_IDENTITY)
+                    .get(&TIMESTAMP_TAG_IDENTITY)
                     .unwrap()
                     .clone()
                     .cast()

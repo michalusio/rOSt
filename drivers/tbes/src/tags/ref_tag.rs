@@ -58,6 +58,7 @@ impl Tag for RefTagImpl {
 }
 
 register! { RefTagImpl => dyn RefTag }
+register! { RefTagImpl => dyn Tag }
 impl RefTag for RefTagImpl {
     fn add(&self, id: Identity, value: Identity) {
         let mut lock = self.index.write();
@@ -67,11 +68,9 @@ impl RefTag for RefTagImpl {
         lock.insert_pair(value, id);
     }
 
-    fn get_identities(&self, value: Option<Identity>) -> BTreeSet<Identity> {
+    fn get_identities(&self, value: Identity, negate: bool) -> BTreeSet<Identity> {
         let lock = self.index.read();
-        if let Some(value) = value {
-            lock.get_values_from_key(value).cloned().unwrap_or_default()
-        } else {
+        if negate {
             BTreeSet::from_iter(
                 self.random_store
                     .read()
@@ -79,6 +78,8 @@ impl RefTag for RefTagImpl {
                     .cloned()
                     .filter(|id| !lock.contains_value(*id)),
             )
+        } else {
+            lock.get_values_from_key(value).cloned().unwrap_or_default()
         }
     }
 }

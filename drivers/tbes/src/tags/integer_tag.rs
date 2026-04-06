@@ -3,6 +3,7 @@ use crosstrait::register;
 use internal_utils::tag_store::Identity;
 use internal_utils::tag_store::IntegerTag;
 use internal_utils::tag_store::Tag;
+use internal_utils::tag_store::U64QueryExpressionType;
 use spin::RwLock;
 
 use crate::multi_value_index::MultiValueIndex;
@@ -58,6 +59,7 @@ impl Tag for IntegerTagImpl {
 }
 
 register! { IntegerTagImpl => dyn IntegerTag }
+register! { IntegerTagImpl => dyn Tag }
 impl IntegerTag for IntegerTagImpl {
     fn add(&self, id: Identity, value: u64) {
         let mut lock = self.index.write();
@@ -67,18 +69,41 @@ impl IntegerTag for IntegerTagImpl {
         lock.insert_pair(value, id);
     }
 
-    fn get_identities(&self, value: Option<u64>) -> BTreeSet<Identity> {
+    fn get_identities(&self, value: u64, filter: U64QueryExpressionType) -> BTreeSet<Identity> {
         let lock = self.index.read();
-        if let Some(value) = value {
-            lock.get_values_from_key(value).cloned().unwrap_or_default()
-        } else {
-            BTreeSet::from_iter(
+        match filter {
+            U64QueryExpressionType::EqualTo => {
+                lock.get_values_from_key(value).cloned().unwrap_or_default()
+            }
+            U64QueryExpressionType::NotEqualTo => BTreeSet::from_iter(
                 self.random_store
                     .read()
                     .keys()
                     .cloned()
-                    .filter(|id| !lock.contains_value(*id)),
-            )
+                    .filter(|id| !lock.contains_pair(value, *id)),
+            ),
+            U64QueryExpressionType::LessThan => BTreeSet::from_iter(
+                lock.get_values_from_key_and_below(value)
+                    .filter(|pair| *pair.0 != value)
+                    .map(|pair| pair.1)
+                    .cloned(),
+            ),
+            U64QueryExpressionType::LessThanOrEqualTo => BTreeSet::from_iter(
+                lock.get_values_from_key_and_below(value)
+                    .map(|pair| pair.1)
+                    .cloned(),
+            ),
+            U64QueryExpressionType::GreaterThan => BTreeSet::from_iter(
+                lock.get_values_from_key_and_above(value)
+                    .filter(|pair| *pair.0 != value)
+                    .map(|pair| pair.1)
+                    .cloned(),
+            ),
+            U64QueryExpressionType::GreaterThanOrEqualTo => BTreeSet::from_iter(
+                lock.get_values_from_key_and_above(value)
+                    .map(|pair| pair.1)
+                    .cloned(),
+            ),
         }
     }
 }

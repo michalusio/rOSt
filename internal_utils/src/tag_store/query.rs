@@ -7,69 +7,69 @@ pub enum Query {
     And(Vec<Query>),
     Or(Vec<Query>),
     Not(Box<Query>),
-    Binary(BinaryQueryExpression),
+    Binary(QueryExpression),
 }
 
 #[derive(Clone)]
-pub enum BinaryQueryExpression {
-    Bool(BinaryBoolQueryExpression),
-    U64(BinaryU64QueryExpression),
-    Identity(BinaryIdentityQueryExpression),
+pub enum QueryExpression {
+    Bool(BoolQueryExpression),
+    U64(U64QueryExpression),
+    Identity(IdentityQueryExpression),
 }
 
-impl From<BinaryQueryExpression> for Query {
-    fn from(value: BinaryQueryExpression) -> Self {
+impl From<QueryExpression> for Query {
+    fn from(value: QueryExpression) -> Self {
         Query::Binary(value)
     }
 }
 
 #[derive(Clone)]
-pub struct BinaryBoolQueryExpression {
+pub struct BoolQueryExpression {
     pub first: Arc<dyn BooleanTag>,
     pub second: bool,
-    pub operation: BinaryBoolQueryExpressionType,
+    pub operation: BoolQueryExpressionType,
 }
 
-impl From<BinaryBoolQueryExpression> for BinaryQueryExpression {
-    fn from(value: BinaryBoolQueryExpression) -> Self {
-        BinaryQueryExpression::Bool(value)
+impl From<BoolQueryExpression> for QueryExpression {
+    fn from(value: BoolQueryExpression) -> Self {
+        QueryExpression::Bool(value)
     }
 }
 
 #[derive(Clone)]
-pub struct BinaryU64QueryExpression {
+pub struct U64QueryExpression {
     pub first: Arc<dyn IntegerTag>,
     pub second: u64,
-    pub operation: BinaryU64QueryExpressionType,
+    pub operation: U64QueryExpressionType,
 }
 
-impl From<BinaryU64QueryExpression> for BinaryQueryExpression {
-    fn from(value: BinaryU64QueryExpression) -> Self {
-        BinaryQueryExpression::U64(value)
+impl From<U64QueryExpression> for QueryExpression {
+    fn from(value: U64QueryExpression) -> Self {
+        QueryExpression::U64(value)
     }
 }
 
 #[derive(Clone)]
-pub struct BinaryIdentityQueryExpression {
+pub struct IdentityQueryExpression {
     pub first: Arc<dyn RefTag>,
     pub second: Identity,
-    pub operation: BinaryBoolQueryExpressionType,
+    pub operation: BoolQueryExpressionType,
 }
 
-impl From<BinaryIdentityQueryExpression> for BinaryQueryExpression {
-    fn from(value: BinaryIdentityQueryExpression) -> Self {
-        BinaryQueryExpression::Identity(value)
+impl From<IdentityQueryExpression> for QueryExpression {
+    fn from(value: IdentityQueryExpression) -> Self {
+        QueryExpression::Identity(value)
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum BinaryBoolQueryExpressionType {
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum BoolQueryExpressionType {
     EqualTo,
     NotEqualTo,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum BinaryU64QueryExpressionType {
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum U64QueryExpressionType {
     EqualTo,
     NotEqualTo,
     LessThan,

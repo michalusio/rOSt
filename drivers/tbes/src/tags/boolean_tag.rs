@@ -50,6 +50,7 @@ impl Tag for BooleanTagImpl {
 }
 
 register! { BooleanTagImpl => dyn BooleanTag }
+register! { BooleanTagImpl => dyn Tag }
 impl BooleanTag for BooleanTagImpl {
     fn add(&self, id: Identity) {
         let mut lock = self.index.write();

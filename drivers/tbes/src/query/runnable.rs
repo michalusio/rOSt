@@ -1,9 +1,12 @@
 use core::iter;
 
+use alloc::format;
 use alloc::vec;
 use alloc::{boxed::Box, collections::btree_set::BTreeSet, vec::Vec};
+use internal_utils::tag_store::IdentityQueryExpression;
 use internal_utils::tag_store::{
-    BinaryBoolQueryExpression, BinaryBoolQueryExpressionType, BinaryQueryExpression, Query,
+    BoolQueryExpression, BoolQueryExpressionType, Query, QueryExpression, U64QueryExpression,
+    U64QueryExpressionType,
 };
 
 use crate::query::negate::Negatable;
@@ -95,6 +98,16 @@ impl Runnable for Query {
             Query::And(items) => {
                 if items.len() == 1 {
                     items[0].run(query_writer)
+                } else if items.len() == 2 {
+                    query_writer.open_section("NestedLoop");
+                    let set = BTreeSet::from_iter(
+                        items[0]
+                            .run(query_writer)
+                            .intersection(&items[1].run(query_writer))
+                            .copied(),
+                    );
+                    query_writer.close_section();
+                    set
                 } else {
                     query_writer.open_section("SeriesNestedLoop");
                     let mut pairs = items.iter();
@@ -128,6 +141,16 @@ impl Runnable for Query {
             Query::Or(items) => {
                 if items.len() == 1 {
                     items[0].run(query_writer)
+                } else if items.len() == 2 {
+                    query_writer.open_section("Concatenate");
+                    let set = BTreeSet::from_iter(
+                        items[0]
+                            .run(query_writer)
+                            .union(&items[1].run(query_writer))
+                            .copied(),
+                    );
+                    query_writer.close_section();
+                    set
                 } else {
                     query_writer.open_section("SeriesConcatenate");
                     let mut pairs = items.iter();
@@ -164,28 +187,71 @@ impl Runnable for Query {
     }
 }
 
-impl Runnable for BinaryQueryExpression {
+impl Runnable for QueryExpression {
     fn normalize(self) -> Query {
         Query::Binary(self)
     }
 
     fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
         match self {
-            BinaryQueryExpression::Bool(bool_query) => bool_query.run(query_writer),
-            BinaryQueryExpression::U64(u64_query) => todo!(),
-            BinaryQueryExpression::Identity(identity_query) => todo!(),
+            QueryExpression::Bool(bool_query) => bool_query.run(query_writer),
+            QueryExpression::U64(u64_query) => u64_query.run(query_writer),
+            QueryExpression::Identity(identity_query) => identity_query.run(query_writer),
         }
     }
 }
 
-impl Runnable for BinaryBoolQueryExpression {
+impl Runnable for BoolQueryExpression {
     fn normalize(self) -> Query {
-        Query::Binary(BinaryQueryExpression::Bool(self))
+        Query::Binary(QueryExpression::Bool(self))
     }
 
     fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
-        let value = (self.operation == BinaryBoolQueryExpressionType::EqualTo) ^ !self.second;
+        let value = (self.operation == BoolQueryExpressionType::EqualTo) ^ !self.second;
         query_writer.item_vec([self.first.name(), "=", if value { "true" } else { "false" }]);
         self.first.get_identities(value)
+    }
+}
+
+impl Runnable for U64QueryExpression {
+    fn normalize(self) -> Query {
+        Query::Binary(QueryExpression::U64(self))
+    }
+
+    fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
+        query_writer.item_vec([
+            self.first.name(),
+            match self.operation {
+                U64QueryExpressionType::EqualTo => "=",
+                U64QueryExpressionType::NotEqualTo => "!=",
+                U64QueryExpressionType::LessThan => "<",
+                U64QueryExpressionType::LessThanOrEqualTo => "<=",
+                U64QueryExpressionType::GreaterThan => ">",
+                U64QueryExpressionType::GreaterThanOrEqualTo => ">=",
+            },
+            &format!("{}", self.second),
+        ]);
+        self.first.get_identities(self.second, self.operation)
+    }
+}
+
+impl Runnable for IdentityQueryExpression {
+    fn normalize(self) -> Query {
+        Query::Binary(QueryExpression::Identity(self))
+    }
+
+    fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
+        query_writer.item_vec([
+            self.first.name(),
+            match self.operation {
+                BoolQueryExpressionType::EqualTo => "=",
+                BoolQueryExpressionType::NotEqualTo => "!=",
+            },
+            &format!("{}", self.second),
+        ]);
+        self.first.get_identities(
+            self.second,
+            self.operation == BoolQueryExpressionType::NotEqualTo,
+        )
     }
 }
