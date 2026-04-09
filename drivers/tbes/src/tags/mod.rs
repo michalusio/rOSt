@@ -17,7 +17,8 @@ use internal_utils::{
     logln,
     tag_store::{
         BooleanTag, Entity, IntegerTag, KERNEL_IDENTITY, OWNER_TAG_IDENTITY, Query, QueryOptions,
-        QueryResult, RefTag, TAG_STORE, TAG_TAG_IDENTITY, TIMESTAMP_TAG_IDENTITY, Tag, TagStore,
+        QueryResult, RefTag, TAG_STORE, TAG_TAG_IDENTITY, TIMESTAMP_TAG_IDENTITY, Tag,
+        TagNotFoundOrInvalidError, TagStore, USER_TAG_IDENTITY,
     },
 };
 use spin::RwLock;
@@ -80,9 +81,9 @@ impl TBESTagStore {
         tag_tag.add(id);
 
         ot.add(id, KERNEL_IDENTITY);
-        store_lock
-            .keys()
-            .for_each(|id| ot.add(*id, KERNEL_IDENTITY));
+        store_lock.keys().for_each(|id| {
+            ot.add(*id, KERNEL_IDENTITY);
+        });
         store_lock.insert(id, Arc::new(ot));
     }
 
@@ -114,7 +115,9 @@ impl TBESTagStore {
         owner_tag.add(id, KERNEL_IDENTITY);
 
         tt.add(id, 0);
-        store_lock.keys().for_each(|id| tt.add(*id, 0));
+        store_lock.keys().for_each(|id| {
+            tt.add(*id, 0);
+        });
         store_lock.insert(id, Arc::new(tt));
     }
 
@@ -143,7 +146,7 @@ impl TBESTagStore {
 
 impl TagStore for TBESTagStore {
     fn query(&self, query: Query, options: QueryOptions) -> QueryResult {
-        let mut writer = QueryContext::default();
+        let mut writer = QueryContext::new(options.show_query_plan);
         let normalized_query = query.normalize();
 
         let set = normalized_query.run(&mut writer);
@@ -154,10 +157,6 @@ impl TagStore for TBESTagStore {
         }
     }
 
-    fn get_tag_tag(&self) -> Arc<dyn BooleanTag> {
-        self.tag_tag.clone()
-    }
-
     fn get_entity(&self, id: Identity) -> Option<Entity> {
         self.random_store.read().get(&id).cloned()
     }
@@ -165,7 +164,7 @@ impl TagStore for TBESTagStore {
     fn get_all_tags(&self) -> BTreeMap<String, Entity> {
         let store = self.random_store.read();
         BTreeMap::from_iter(
-            self.get_tag_tag()
+            self.tag_tag
                 .get_identities(true)
                 .iter()
                 .filter_map(|id| store.get(id))
@@ -177,32 +176,149 @@ impl TagStore for TBESTagStore {
         )
     }
 
-    fn add_entity(&self, id: Identity, entity: Entity, owner: Identity, timestamp: u64) -> bool {
-        if self.get_entity(owner).is_some() && self.get_entity(id).is_none() {
-            let mut store_lock = self.random_store.write();
+    fn add_entity(
+        &self,
+        id: Identity,
+        entity: Entity,
+        owner: Identity,
+        timestamp: u64,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let is_owner_a_user = self.has_binary_tag(owner, USER_TAG_IDENTITY)?;
+        if is_owner_a_user && self.get_entity(id).is_none() {
+            self.assign_integer_tag(id, TIMESTAMP_TAG_IDENTITY, timestamp)
+                .unwrap();
+            self.assign_ref_tag(id, OWNER_TAG_IDENTITY, owner).unwrap();
             {
-                let owner_tag: Arc<dyn RefTag> = store_lock
-                    .get(&OWNER_TAG_IDENTITY)
-                    .unwrap()
-                    .clone()
-                    .cast()
-                    .unwrap();
-                owner_tag.add(id, owner);
+                let mut store_lock = self.random_store.write();
+                store_lock.insert(id, entity);
             }
-            {
-                let timestamp_tag: Arc<dyn IntegerTag> = store_lock
-                    .get(&TIMESTAMP_TAG_IDENTITY)
-                    .unwrap()
-                    .clone()
-                    .cast()
-                    .unwrap();
-                timestamp_tag.add(id, timestamp);
-            }
-            store_lock.insert(id, entity);
-            true
+            Ok(true)
         } else {
-            false
+            Ok(false)
         }
+    }
+
+    fn has_binary_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn BooleanTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.has(id))
+    }
+
+    fn has_integer_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+        value: u64,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn IntegerTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.has(id, value))
+    }
+
+    fn has_ref_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+        value: Identity,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn RefTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.has(id, value))
+    }
+
+    fn assign_binary_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn BooleanTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.add(id))
+    }
+
+    fn assign_integer_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+        value: u64,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn IntegerTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.add(id, value))
+    }
+
+    fn assign_ref_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+        value: Identity,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn RefTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.add(id, value))
+    }
+
+    fn unassign_binary_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn BooleanTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.remove(id))
+    }
+
+    fn unassign_integer_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+        value: u64,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn IntegerTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.remove(id, value))
+    }
+
+    fn unassign_ref_tag(
+        &self,
+        id: Identity,
+        tag_id: Identity,
+        value: Identity,
+    ) -> Result<bool, TagNotFoundOrInvalidError> {
+        let tag: Arc<dyn RefTag> = self
+            .get_entity(tag_id)
+            .ok_or(TagNotFoundOrInvalidError)?
+            .cast()
+            .ok_or(TagNotFoundOrInvalidError)?;
+        Ok(tag.remove(id, value))
     }
 }
 

@@ -95,94 +95,38 @@ impl Runnable for Query {
 
     fn run(&self, query_writer: &mut QueryContext) -> BTreeSet<Identity> {
         match self {
-            Query::And(items) => {
-                if items.len() == 1 {
-                    items[0].run(query_writer)
-                } else if items.len() == 2 {
-                    query_writer.open_section("NestedLoop");
-                    let set = BTreeSet::from_iter(
-                        items[0]
-                            .run(query_writer)
-                            .intersection(&items[1].run(query_writer))
-                            .copied(),
-                    );
-                    query_writer.close_section();
-                    set
-                } else {
-                    query_writer.open_section("SeriesNestedLoop");
-                    let mut pairs = items.iter();
-                    let mut processed = vec![];
-                    'outer: loop {
-                        match pairs.next_chunk::<2>() {
-                            Ok([a, b]) => {
-                                query_writer.open_section("NestedLoop");
-                                processed.push(BTreeSet::from_iter(
-                                    a.run(query_writer)
-                                        .intersection(&b.run(query_writer))
-                                        .copied(),
-                                ));
-                                query_writer.close_section();
-                            }
-                            Err(mut rest) => {
-                                if let Some(rest) = rest.next() {
-                                    processed.push(rest.run(query_writer));
-                                }
-                                break 'outer;
-                            }
-                        }
-                    }
-                    query_writer.close_section();
-                    processed
-                        .into_iter()
-                        .reduce(|a, b| BTreeSet::from_iter(a.intersection(&b).copied()))
-                        .unwrap_or_default()
-                }
-            }
-            Query::Or(items) => {
-                if items.len() == 1 {
-                    items[0].run(query_writer)
-                } else if items.len() == 2 {
-                    query_writer.open_section("Concatenate");
-                    let set = BTreeSet::from_iter(
-                        items[0]
-                            .run(query_writer)
-                            .union(&items[1].run(query_writer))
-                            .copied(),
-                    );
-                    query_writer.close_section();
-                    set
-                } else {
-                    query_writer.open_section("SeriesConcatenate");
-                    let mut pairs = items.iter();
-                    let mut processed = vec![];
-                    'outer: loop {
-                        match pairs.next_chunk::<2>() {
-                            Ok([a, b]) => {
-                                query_writer.open_section("Concatenate");
-                                processed.push(BTreeSet::from_iter(
-                                    a.run(query_writer).union(&b.run(query_writer)).copied(),
-                                ));
-                                query_writer.close_section();
-                            }
-                            Err(mut rest) => {
-                                if let Some(rest) = rest.next() {
-                                    processed.push(rest.run(query_writer));
-                                }
-                                break 'outer;
-                            }
-                        }
-                    }
-                    query_writer.close_section();
-                    processed
-                        .into_iter()
-                        .reduce(|a, b| BTreeSet::from_iter(a.union(&b).copied()))
-                        .unwrap_or_default()
-                }
-            }
+            Query::And(items) => reduce_down(items, query_writer, "NestedLoop", &|a, b| {
+                BTreeSet::from_iter(a.intersection(b).copied())
+            }),
+            Query::Or(items) => reduce_down(items, query_writer, "Concatenate", &|a, b| {
+                BTreeSet::from_iter(a.union(b).copied())
+            }),
             Query::Binary(expression) => expression.run(query_writer),
             Query::Not(_) => {
                 panic!("Query negations are not runnable - normalize the query first!")
             }
+        }
+    }
+}
+
+fn reduce_down(
+    children: &[Query],
+    query_context: &mut QueryContext,
+    name: &'static str,
+    reducer: &impl Fn(&BTreeSet<Identity>, &BTreeSet<Identity>) -> BTreeSet<Identity>,
+) -> BTreeSet<Identity> {
+    match children.len() {
+        0 => BTreeSet::new(),
+        1 => children[0].run(query_context),
+        _ => {
+            query_context.open_section(name);
+            let (left, right) = children.split_at(children.len() / 2);
+            let set = reducer(
+                &reduce_down(left, query_context, name, reducer),
+                &reduce_down(right, query_context, name, reducer),
+            );
+            query_context.close_section();
+            set
         }
     }
 }

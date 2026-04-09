@@ -17,14 +17,17 @@ impl<Key: Ord + Copy, Value: Ord + Copy> Default for MultiValueIndex<Key, Value>
 
 impl<Key: Ord + Copy, Value: Ord + Copy> MultiValueIndex<Key, Value> {
     /// Inserts a pair (Key, Value) into the index
-    pub fn insert_pair(&mut self, key: Key, value: Value) {
+    pub fn insert_pair(&mut self, key: Key, value: Value) -> bool {
         if self.map.entry(key).or_default().insert(value) {
             self.reverse_map.entry(value).or_default().insert(key);
+            true
+        } else {
+            false
         }
     }
 
     /// Removes a pair (Key, Value) from the index
-    pub fn remove_pair(&mut self, key: Key, value: Value) {
+    pub fn remove_pair(&mut self, key: Key, value: Value) -> bool {
         if let Some(set) = self.map.get_mut(&key)
             && set.remove(&value)
         {
@@ -38,6 +41,9 @@ impl<Key: Ord + Copy, Value: Ord + Copy> MultiValueIndex<Key, Value> {
                     self.reverse_map.remove(&value);
                 }
             }
+            true
+        } else {
+            false
         }
     }
 
@@ -56,7 +62,7 @@ impl<Key: Ord + Copy, Value: Ord + Copy> MultiValueIndex<Key, Value> {
     }
 
     /// Removes all pairs with the specified Value from the index
-    pub fn remove_value(&mut self, value: Value) {
+    pub fn remove_value(&mut self, value: Value) -> bool {
         if let Some(rset) = self.reverse_map.remove(&value) {
             for key in rset.iter() {
                 if let Some(set) = self.map.get_mut(key) {
@@ -66,6 +72,9 @@ impl<Key: Ord + Copy, Value: Ord + Copy> MultiValueIndex<Key, Value> {
                     }
                 }
             }
+            true
+        } else {
+            false
         }
     }
 

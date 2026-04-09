@@ -9,7 +9,7 @@ bootloader = "0.11.12"
 
 [dependencies]
 bitflags.workspace = true
-ovmf-prebuilt = "0.2.7"
+ovmf-prebuilt = "0.2.8"
 
 [profile.dev]
 panic = "abort"
@@ -41,8 +41,9 @@ vga = { path = "drivers/vga" }
 ata = { path = "drivers/ata" }
 tbes = { path = "drivers/tbes" }
 
-bumpalo = { version = "3.20.2", features = ["collections"] }
-yoke = { version = "0.8.1", features = ["derive"] }
+itertools = { version = "0.14.0", default-features = false, features = [
+    "use_alloc",
+] }
 bitflags = { version = "2.11.0", default-features = false }
 bootloader_api = { version = "0.11" }
 pic8259 = { version = "0.11.0" }
@@ -57,15 +58,14 @@ spin = { version = "0.10.0", default-features = false, features = [
     "rwlock",
 ] }
 x86_64 = { version = "0.15.4" }
-byteorder = { version = "1.5.0", default-features = false }
+byteorder = { version = "1", default-features = false }
 tinytga = { version = "0.5.0" }
 uart_16550 = { version = "0.4.0" }
 lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
-crosstrait = { git = "https://github.com/michalusio/crosstrait", branch = "main", default-features = false, features = [
+crosstrait = { version = "0.1.4", default-features = false, features = [
     "alloc",
     "global_registry",
 ] }
-
 
 ###################################
 # Register all failing tests here #

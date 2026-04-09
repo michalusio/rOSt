@@ -60,12 +60,24 @@ impl Tag for RefTagImpl {
 register! { RefTagImpl => dyn RefTag }
 register! { RefTagImpl => dyn Tag }
 impl RefTag for RefTagImpl {
-    fn add(&self, id: Identity, value: Identity) {
+    fn add(&self, id: Identity, value: Identity) -> bool {
         let mut lock = self.index.write();
+        let mut was_in_index = false;
         if !self.multi_assignable {
-            lock.remove_value(id);
+            was_in_index = lock.remove_value(id);
         }
-        lock.insert_pair(value, id);
+        was_in_index |= lock.insert_pair(value, id);
+        was_in_index
+    }
+
+    fn has(&self, id: Identity, value: Identity) -> bool {
+        let lock = self.index.read();
+        lock.contains_pair(value, id)
+    }
+
+    fn remove(&self, id: Identity, value: Identity) -> bool {
+        let mut lock = self.index.write();
+        lock.remove_pair(value, id)
     }
 
     fn get_identities(&self, value: Identity, negate: bool) -> BTreeSet<Identity> {

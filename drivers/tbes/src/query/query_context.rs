@@ -1,15 +1,27 @@
 use core::{fmt::Display, iter::*};
 
+use alloc::vec;
 use alloc::{string::String, vec::Vec};
 
-#[derive(Default)]
 pub struct QueryContext {
+    log_query_plan: bool,
     buffer: String,
     open_sections: Vec<&'static str>,
 }
 
 impl QueryContext {
+    pub fn new(log_query_plan: bool) -> Self {
+        Self {
+            log_query_plan,
+            buffer: String::new(),
+            open_sections: vec![],
+        }
+    }
+
     pub fn open_section(&mut self, name: &'static str) {
+        if !self.log_query_plan {
+            return;
+        }
         let spaces = repeat_n(' ', self.open_sections.len());
         let tag = once('<').chain(name.chars()).chain(once('>'));
         self.buffer.extend(spaces.chain(tag).chain(once('\n')));
@@ -17,6 +29,9 @@ impl QueryContext {
     }
 
     pub fn close_section(&mut self) {
+        if !self.log_query_plan {
+            return;
+        }
         let name = self
             .open_sections
             .pop()
@@ -30,6 +45,9 @@ impl QueryContext {
     }
 
     pub fn item(&mut self, name: &str) {
+        if !self.log_query_plan {
+            return;
+        }
         let spaces = repeat_n(' ', self.open_sections.len());
         let tag = once('<')
             .chain(name.chars())
@@ -39,6 +57,9 @@ impl QueryContext {
     }
 
     pub fn item_vec<'a>(&mut self, args: impl IntoIterator<Item = &'a str>) {
+        if !self.log_query_plan {
+            return;
+        }
         let spaces = repeat_n(' ', self.open_sections.len());
         let tag = once('<')
             .chain(args.into_iter().flat_map(str::chars))

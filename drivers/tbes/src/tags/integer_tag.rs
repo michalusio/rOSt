@@ -61,12 +61,24 @@ impl Tag for IntegerTagImpl {
 register! { IntegerTagImpl => dyn IntegerTag }
 register! { IntegerTagImpl => dyn Tag }
 impl IntegerTag for IntegerTagImpl {
-    fn add(&self, id: Identity, value: u64) {
+    fn add(&self, id: Identity, value: u64) -> bool {
         let mut lock = self.index.write();
+        let mut was_in_index = false;
         if !self.multi_assignable {
-            lock.remove_value(id);
+            was_in_index = lock.remove_value(id);
         }
-        lock.insert_pair(value, id);
+        was_in_index |= lock.insert_pair(value, id);
+        was_in_index
+    }
+
+    fn has(&self, id: Identity, value: u64) -> bool {
+        let lock = self.index.read();
+        lock.contains_pair(value, id)
+    }
+
+    fn remove(&self, id: Identity, value: u64) -> bool {
+        let mut lock = self.index.write();
+        lock.remove_pair(value, id)
     }
 
     fn get_identities(&self, value: u64, filter: U64QueryExpressionType) -> BTreeSet<Identity> {
