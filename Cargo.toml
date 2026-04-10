@@ -12,7 +12,7 @@ bitflags.workspace = true
 ovmf-prebuilt = "0.2.7"
 
 [profile.dev]
-panic = "abort"
+panic = "unwind"
 debug = false
 lto = true
 strip = true
@@ -20,7 +20,7 @@ codegen-units = 1
 incremental = false
 
 [profile.release]
-panic = "abort"
+panic = "unwind"
 debug = false
 lto = true
 strip = true
