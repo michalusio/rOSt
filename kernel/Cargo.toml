@@ -23,3 +23,4 @@ vga = { workspace = true }
 ata = { workspace = true }
 tbes = { workspace = true }
 crosstrait = { workspace = true }
+itertools = { workspace = true }

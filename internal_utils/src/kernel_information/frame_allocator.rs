@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use spin::Mutex;
 use x86_64::structures::paging::{FrameAllocator, FrameDeallocator, Size2MiB, Size4KiB};
 
-use crate::{display::format_size, kernel_information::allocator::ALLOCATOR, log, logln};
+use crate::{display::format_size, kernel_information::allocator::ALLOCATOR, logln};
 
 pub trait FullFrameAllocator:
     FrameAllocator<Size4KiB>

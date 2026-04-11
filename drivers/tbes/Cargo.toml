@@ -8,3 +8,4 @@ internal_utils = { workspace = true }
 spin = { workspace = true }
 lazy_static = { workspace = true }
 crosstrait = { workspace = true }
+itertools = { workspace = true }
