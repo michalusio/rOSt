@@ -6,5 +6,6 @@
   "files.autoSave": "afterDelay",
   "rust-analyzer.checkOnSave": true,
   "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.cargo.allTargets": false
+  "rust-analyzer.cargo.allTargets": false,
+  "rust-analyzer.cargo.target": "x86_64-unknown-none"
 }
