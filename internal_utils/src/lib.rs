@@ -25,6 +25,8 @@ pub mod structures;
 pub mod tag_store;
 
 mod critical_section;
+#[allow(unused_imports)]
+// Ensuring the critical_section implementation is available to the linker
 use critical_section as _;
 
 #[inline(always)]

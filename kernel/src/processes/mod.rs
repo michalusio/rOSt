@@ -10,7 +10,11 @@ mod registers_state;
 use core::ptr::Alignment;
 
 use alloc::boxed::Box;
-use internal_utils::{HexNumber, logln};
+use internal_utils::{
+    HexNumber,
+    gpu_device::{GPU_DEVICE, GPUDeviceCapabilityMut, GPUDeviceCapabilityRequest, RED, WHITE},
+    logln,
+};
 pub use registers_state::RegistersState;
 
 mod scheduler;
@@ -20,7 +24,7 @@ use scheduler::{FirstComeFirstServedScheduler, Scheduler};
 pub use scheduler::{SCHEDULER, add_process, run_processes};
 use x86_64::VirtAddr;
 
-use crate::{hlt_loop, processes::thread::Thread};
+use crate::{ikd_check, processes::thread::Thread};
 use alloc::alloc::{Layout, alloc};
 
 mod wakers;
@@ -67,5 +71,32 @@ fn create_idle_process(scheduler: &mut FirstComeFirstServedScheduler) {
 #[unsafe(no_mangle)]
 pub extern "C" fn idle_process_entry() -> ! {
     logln!("Idle process started!");
-    hlt_loop();
+    let mut position = 0;
+    loop {
+        ikd_check();
+        {
+            let mut lock = GPU_DEVICE.lock();
+            let gpu = lock.as_mut().unwrap();
+            let height = gpu.height();
+            if let Some(GPUDeviceCapabilityMut::Clearable(clearable)) =
+                gpu.get_capability_mut(GPUDeviceCapabilityRequest::Clearable)
+            {
+                clearable.clear(WHITE);
+            }
+            if let Some(GPUDeviceCapabilityMut::Shape(shape)) =
+                gpu.get_capability_mut(GPUDeviceCapabilityRequest::Shape)
+            {
+                shape.fill_rectangle(position, (height - 100) as u16, 64, 64, RED);
+            }
+            if let Some(GPUDeviceCapabilityMut::Flush(flush)) =
+                gpu.get_capability_mut(GPUDeviceCapabilityRequest::Flush)
+            {
+                flush.flush();
+            }
+            position += 1;
+            if position as usize >= gpu.width() - 64 {
+                position = 0;
+            }
+        }
+    }
 }

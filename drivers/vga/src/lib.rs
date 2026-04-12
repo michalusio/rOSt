@@ -67,4 +67,12 @@ fn show_logo<T: GPUDevice>(device: &mut T) {
     } else {
         logln!("No logo drawing capability detected");
     }
+    if let Some(GPUDeviceCapabilityMut::Flush(flush)) =
+        device.get_capability_mut(GPUDeviceCapabilityRequest::Flush)
+    {
+        flush.flush();
+        logln!("VGA flushed");
+    } else {
+        logln!("No VGA flushing capability detected");
+    }
 }

@@ -13,7 +13,7 @@
 
 use core::arch::asm;
 
-use internal_utils::{logln, serial_read, try_serial_read};
+use internal_utils::{logln, try_serial_read};
 
 extern crate alloc;
 
@@ -38,15 +38,21 @@ pub fn hlt_loop() -> ! {
 pub fn hlt_loop_exitable() {
     logln!("Beginning halt loop");
     loop {
-        let mut exit = false;
-        try_serial_read!(|command| {
-            exit = ikd::parse_command(command);
-        });
-        if exit {
+        if ikd_check() {
             break;
         }
         x86_64::instructions::hlt();
     }
+}
+
+#[inline(always)]
+/// One pass of the IKD checker, which tries to read from serial interface and parse a command, and otherwise returns
+pub fn ikd_check() -> bool {
+    let mut exit = false;
+    try_serial_read!(|command| {
+        exit = ikd::parse_command(command);
+    });
+    exit
 }
 
 #[inline(always)]
@@ -55,7 +61,7 @@ pub fn hlt_loop_exitable() {
 pub fn hlt_loop_hard() -> ! {
     logln!("Beginning halt loop");
     loop {
-        serial_read!(|command| {
+        try_serial_read!(|command| {
             ikd::parse_command(command);
         });
         pause();

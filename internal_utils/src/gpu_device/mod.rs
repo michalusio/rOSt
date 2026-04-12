@@ -1,9 +1,7 @@
 mod vga_color;
 
 use alloc::boxed::Box;
-pub use vga_color::{
-    BLACK, BLUE, BSOD_BLUE, CHARLOTTE, CLAY, GREEN, RED, TRANSPARENT, VGAColor, WHITE,
-};
+pub use vga_color::{BLACK, BLUE, BSOD_BLUE, CHARLOTTE, CLAY, GREEN, RED, VGAColor, WHITE};
 
 mod point_2d;
 pub use point_2d::Point2D;
@@ -14,7 +12,8 @@ pub use capability::{GPUDeviceCapabilityMut, GPUDeviceCapabilityRef, GPUDeviceCa
 mod traits;
 use crate::{capabilities::Device, structures::OnceMutex};
 pub use traits::{
-    ClearableGPUDevice, ImageGPUDevice, PlaneGPUDevice, ShapeGPUDevice, TextGPUDevice,
+    ClearableGPUDevice, FlushableGPUDevice, ImageGPUDevice, PlaneGPUDevice, ShapeGPUDevice,
+    TextGPUDevice,
 };
 
 pub trait GPUDevice: Device {
