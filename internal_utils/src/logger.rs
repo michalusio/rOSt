@@ -35,13 +35,6 @@ macro_rules! try_serial_read {
     };
 }
 
-#[macro_export]
-macro_rules! serial_read {
-    ($arg:expr) => {
-        $crate::logger::__serial_read($arg)
-    };
-}
-
 #[doc(hidden)]
 pub fn __try_serial_read(callback: impl FnOnce(&str)) {
     let mut data = [0u8; 64];
@@ -54,28 +47,6 @@ pub fn __try_serial_read(callback: impl FnOnce(&str)) {
             None
         }
     });
-    if let Some(str) = read {
-        callback(str);
-    }
-}
-
-#[doc(hidden)]
-pub fn __serial_read(callback: impl FnOnce(&str)) {
-    let mut data = [0u8; 64];
-    let read = loop {
-        let result = interrupts::without_interrupts(|| {
-            #[allow(static_mut_refs)]
-            let guard = unsafe { LOGGER.get() };
-            if let Some(logger) = guard {
-                logger.try_receive(&mut data)
-            } else {
-                None
-            }
-        });
-        if result.is_some() {
-            break result;
-        }
-    };
     if let Some(str) = read {
         callback(str);
     }

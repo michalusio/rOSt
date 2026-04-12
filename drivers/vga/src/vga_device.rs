@@ -1,9 +1,9 @@
 use crate::static_stack::StaticStack;
-use alloc::{boxed::Box, slice};
+use alloc::boxed::Box;
 use internal_utils::capabilities::Device;
 use internal_utils::gpu_device::{
-    ClearableGPUDevice, GPUDevice, ImageGPUDevice, PlaneGPUDevice, Point2D, ShapeGPUDevice,
-    TextGPUDevice, VGAColor,
+    ClearableGPUDevice, FlushableGPUDevice, GPUDevice, ImageGPUDevice, PlaneGPUDevice, Point2D,
+    ShapeGPUDevice, TextGPUDevice, VGAColor,
 };
 use internal_utils::has_gpu_device_capability;
 use internal_utils::kernel_information::KernelInformation;
@@ -40,7 +40,7 @@ impl GPUDevice for VGADevice {
         self.height
     }
 
-    has_gpu_device_capability!(Clearable, Plane, Shape, Text, Image);
+    has_gpu_device_capability!(Clearable, Plane, Shape, Text, Image, Flush);
 }
 
 impl ClearableGPUDevice for VGADevice {
@@ -179,12 +179,13 @@ impl ShapeGPUDevice for VGADevice {
     }
 
     fn fill_rectangle(&mut self, x: u16, y: u16, width: u16, height: u16, color: VGAColor<u8>) {
-        let mut index = 0;
+        let mut index = (y as usize) * self.stride + (x as usize);
         for _ in y..y + height {
             for _ in x..x + width {
                 self.pixel_buffer.put_pixel(index, color);
                 index += 1;
             }
+            index = index - (width as usize) + self.stride;
         }
     }
 }
@@ -256,10 +257,15 @@ impl ImageGPUDevice for VGADevice {
                 red: (pixel.color >> 16) as u8,
                 green: (pixel.color >> 8) as u8,
                 blue: pixel.color as u8,
-                alpha: 255,
             };
             self.draw_point(pos.x as u16 + x0, pos.y as u16 + y0, color);
         }
+    }
+}
+
+impl FlushableGPUDevice for VGADevice {
+    fn flush(&mut self) {
+        self.pixel_buffer.flush();
     }
 }
 
@@ -268,7 +274,9 @@ impl VGADevice {
         for (iy, row) in char.raster().iter().enumerate() {
             let mut index = (y as usize + iy) * self.stride + x as usize;
             for byte in row.iter() {
-                self.pixel_buffer.put_pixel(index, color.mul_alpha(*byte));
+                if *byte > 127 {
+                    self.pixel_buffer.put_pixel(index, color);
+                }
                 index += 1;
             }
         }
@@ -280,39 +288,31 @@ pub struct VGADeviceFactory;
 impl VGADeviceFactory {
     pub fn from_kernel_info(kernel_info: KernelInformation) -> VGADevice {
         let buffer = kernel_info.framebuffer.as_ref().unwrap();
+        let pixel_buffer: Box<dyn PixelBuffer> = match (buffer.format, buffer.bytes_per_pixel) {
+            (PixelFormat::RGB, 3) => {
+                Box::new(BasePixelBuffer::<{ PixelFormat::RGB }, 3>::new(buffer))
+            }
+            (PixelFormat::RGB, 4) => {
+                Box::new(BasePixelBuffer::<{ PixelFormat::RGB }, 4>::new(buffer))
+            }
+            (PixelFormat::BGR, 3) => {
+                Box::new(BasePixelBuffer::<{ PixelFormat::BGR }, 3>::new(buffer))
+            }
+            (PixelFormat::BGR, 4) => {
+                Box::new(BasePixelBuffer::<{ PixelFormat::BGR }, 4>::new(buffer))
+            }
+            (PixelFormat::U8, 1) => {
+                Box::new(BasePixelBuffer::<{ PixelFormat::U8 }, 1>::new(buffer))
+            }
+            (format, bytes_per_pixel) => {
+                panic!("Unsupported format and size combination: {format}, {bytes_per_pixel}")
+            }
+        };
         VGADevice {
             width: buffer.width,
             height: buffer.height,
             stride: buffer.stride,
-            pixel_buffer: match buffer.format {
-                PixelFormat::RGB => Box::new(BasePixelBuffer::<{ PixelFormat::RGB }> {
-                    bytes_per_pixel: buffer.bytes_per_pixel,
-                    frame_pointer: unsafe {
-                        slice::from_raw_parts_mut::<u8>(
-                            buffer.buffer.get(),
-                            buffer.bytes_per_pixel * buffer.stride * buffer.height,
-                        )
-                    },
-                }),
-                PixelFormat::BGR => Box::new(BasePixelBuffer::<{ PixelFormat::BGR }> {
-                    bytes_per_pixel: buffer.bytes_per_pixel,
-                    frame_pointer: unsafe {
-                        slice::from_raw_parts_mut::<u8>(
-                            buffer.buffer.get(),
-                            buffer.bytes_per_pixel * buffer.stride * buffer.height,
-                        )
-                    },
-                }),
-                PixelFormat::U8 => Box::new(BasePixelBuffer::<{ PixelFormat::U8 }> {
-                    bytes_per_pixel: buffer.bytes_per_pixel,
-                    frame_pointer: unsafe {
-                        slice::from_raw_parts_mut::<u8>(
-                            buffer.buffer.get(),
-                            buffer.bytes_per_pixel * buffer.stride * buffer.height,
-                        )
-                    },
-                }),
-            },
+            pixel_buffer,
         }
     }
 }

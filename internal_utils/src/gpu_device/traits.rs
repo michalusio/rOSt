@@ -39,3 +39,7 @@ pub trait TextGPUDevice: GPUDevice {
 pub trait ImageGPUDevice: GPUDevice {
     fn draw_image(&mut self, x: u16, y: u16, image: &RawTga);
 }
+
+pub trait FlushableGPUDevice: GPUDevice {
+    fn flush(&mut self);
+}

@@ -39,9 +39,9 @@ fn main() {
     cmd.arg("-display").arg("sdl");
 
     #[cfg(target_os = "windows")]
-    cmd.arg("-machine").arg("accel=tcg,kernel-irqchip=off");
+    cmd.arg("-machine").arg("accel=whpx");
     #[cfg(target_os = "linux")]
-    cmd.arg("-machine").arg("kernel-irqchip=off"); //accel=kvm
+    cmd.arg("-machine").arg("accel=kvm");
 
     // enable the guest to exit qemu
     cmd.arg("-device")

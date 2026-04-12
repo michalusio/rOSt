@@ -1,5 +1,6 @@
 use crate::gpu_device::{
-    ClearableGPUDevice, ImageGPUDevice, PlaneGPUDevice, ShapeGPUDevice, TextGPUDevice,
+    ClearableGPUDevice, FlushableGPUDevice, ImageGPUDevice, PlaneGPUDevice, ShapeGPUDevice,
+    TextGPUDevice,
 };
 
 macro_rules! gpu_device_capabilities {
@@ -68,5 +69,6 @@ gpu_device_capabilities!(
     Plane => PlaneGPUDevice,
     Shape => ShapeGPUDevice,
     Text => TextGPUDevice,
-    Image => ImageGPUDevice
+    Image => ImageGPUDevice,
+    Flush => FlushableGPUDevice
 );
