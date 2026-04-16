@@ -7,7 +7,8 @@
     adt_const_params,
     unsized_const_params,
     never_type,
-    unsize
+    unsize,
+    unsafe_cell_access
 )]
 
 extern crate alloc;
@@ -16,6 +17,7 @@ pub mod capabilities;
 pub mod clocks;
 mod display;
 pub use display::{HexNumber, ansi_colors, format_size};
+pub mod channels;
 pub mod gpu_device;
 pub mod kernel_information;
 pub mod logger;
