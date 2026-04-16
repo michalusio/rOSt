@@ -41,7 +41,7 @@ impl<T: Clone> Sender<T> {
             fibers.retain(|fiber| Arc::weak_count(fiber) > 0);
 
             for fiber in fibers.iter() {
-                if let spsc::SendResult::Full = fiber.try_send(value.clone()) {
+                if let spsc::SendResultInner::Full = fiber.try_send(value.clone()) {
                     any_failed = true;
                 } else {
                     any_success = true;
@@ -93,7 +93,7 @@ pub struct Receiver<T>(Weak<SPSC<T>>);
 impl<T> Receiver<T> {
     pub fn try_receive(&self) -> ReceiveResult<T> {
         if let Some(arc) = self.0.upgrade() {
-            if let spsc::ReceiveResult::Received(result) = arc.try_receive() {
+            if let spsc::ReceiveResultInner::Received(result) = arc.try_receive() {
                 ReceiveResult::Received(result)
             } else {
                 ReceiveResult::Empty
