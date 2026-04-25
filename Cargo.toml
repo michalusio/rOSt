@@ -44,7 +44,7 @@ tbes = { path = "drivers/tbes" }
 itertools = { version = "0.14.0", default-features = false, features = [
     "use_alloc",
 ] }
-bitflags = { version = "2.11.0", default-features = false }
+bitflags = { version = "2.11.1", default-features = false }
 bootloader_api = { version = "0.11" }
 pic8259 = { version = "0.11.0" }
 noto-sans-mono-bitmap = { version = "0.3.2" }
