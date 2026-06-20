@@ -41,7 +41,7 @@ vga = { path = "drivers/vga" }
 ata = { path = "drivers/ata" }
 tbes = { path = "drivers/tbes" }
 
-itertools = { version = "0.14.0", default-features = false, features = [
+itertools = { version = "0.15.0", default-features = false, features = [
     "use_alloc",
 ] }
 bitflags = { version = "2.13.0", default-features = false }
