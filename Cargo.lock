@@ -118,9 +118,9 @@ dependencies = [
 
 [[package]]
 name = "bootloader_api"
-version = "0.11.15"
+version = "0.11.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c074a3d1075b26ed77e502d6af8ab1263abbdc3d026c166e46480f973287293"
+checksum = "895bece39f47cd2063425b9361c0be662c7e2cf0922471ea16312d853600feb3"
 
 [[package]]
 name = "bumpalo"
