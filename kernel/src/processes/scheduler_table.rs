@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use internal_utils::logln;
+use internal_utils::ilogln;
 
 pub struct SchedulerTable(pub Vec<ProcessInfo>);
 
@@ -18,16 +18,16 @@ pub struct ThreadInfo {
 
 impl SchedulerTable {
     pub fn log(&self) {
-        logln!(" Process   | Thread    | CPU Usage | State     ");
+        ilogln!(" Process   | Thread    | CPU Usage | State     ");
         for p in self.0.iter() {
-            logln!(
+            ilogln!(
                 "{: >10} |           | {: >8}% | {: >9} ",
                 p.id,
                 p.load,
                 if p.kernel_process { "ring 0" } else { "ring 3" }
             );
             for t in p.threads.iter() {
-                logln!(
+                ilogln!(
                     "           | {: >9} | {: >8}% |{: >11}",
                     t.id,
                     t.load,

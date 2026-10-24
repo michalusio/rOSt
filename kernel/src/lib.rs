@@ -13,7 +13,7 @@
 
 use core::arch::asm;
 
-use internal_utils::{logln, try_serial_read};
+use internal_utils::{ilogln, try_serial_read};
 
 extern crate alloc;
 
@@ -36,7 +36,7 @@ pub fn hlt_loop() -> ! {
 /// Endless IKD loop calling halt continuously.
 /// This version is exitable using an IKD command.
 pub fn hlt_loop_exitable() {
-    logln!("Beginning halt loop");
+    ilogln!("Beginning halt loop");
     loop {
         if ikd_check() {
             break;
@@ -59,7 +59,7 @@ pub fn ikd_check() -> bool {
 /// Endless IKD loop.
 /// This version is unexitable and spin-waits for serial read.
 pub fn hlt_loop_hard() -> ! {
-    logln!("Beginning halt loop");
+    ilogln!("Beginning halt loop");
     loop {
         try_serial_read!(|command| {
             ikd::parse_command(command);

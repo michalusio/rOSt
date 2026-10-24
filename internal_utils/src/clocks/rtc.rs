@@ -7,7 +7,7 @@ use x86_64::instructions::{
     port::{PortReadOnly, PortWriteOnly},
 };
 
-use crate::logln;
+use crate::ilogln;
 
 static mut RTC_CONTROLLER: Once<RtcController> = Once::new();
 
@@ -27,7 +27,7 @@ pub fn init_rtc() {
             controller
         })
     };
-    logln!("Initialized RTC, current time: {}", get_current_time());
+    ilogln!("Initialized RTC, current time: {}", get_current_time());
 }
 
 pub fn get_current_time() -> RtcTime {

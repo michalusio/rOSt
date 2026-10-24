@@ -1,5 +1,5 @@
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
-use internal_utils::{clocks::get_current_tick, logln, structures::OnceMutex};
+use internal_utils::{clocks::get_current_tick, ilogln, structures::OnceMutex};
 use spin::{Mutex, MutexGuard};
 use x86_64::structures::paging::page::AddressNotAligned;
 
@@ -44,15 +44,17 @@ pub fn add_process(process: Process) -> Arc<Mutex<Process>> {
     SCHEDULER.lock().unwrap().add_process(process)
 }
 
+pub const BASE_BUDGET: u64 = 100_000;
+
 #[derive(Default)]
-pub struct FirstComeFirstServedScheduler {
+pub struct RoundRobinScheduler {
     /// The currently running process.
     running_thread: Option<Arc<Mutex<Thread>>>,
     /// The list of processes that are registered.
     processes: VecDeque<Arc<Mutex<Process>>>,
 }
 
-impl Scheduler for FirstComeFirstServedScheduler {
+impl Scheduler for RoundRobinScheduler {
     fn get_running_thread(&self) -> Option<Arc<Mutex<Thread>>> {
         self.running_thread.clone()
     }
@@ -82,7 +84,6 @@ impl Scheduler for FirstComeFirstServedScheduler {
                             state: match t.state {
                                 ThreadState::NotStarted => "not started",
                                 ThreadState::Ready => "ready",
-                                ThreadState::Running => "running",
                                 ThreadState::Sleeping(_) => "sleeping",
                                 ThreadState::Terminated => "terminated",
                             },
@@ -110,7 +111,9 @@ impl Scheduler for FirstComeFirstServedScheduler {
             let mut thread_mut = thread.lock();
 
             thread_mut.registers_state = registers_state.clone();
-            thread_mut.total_ticks += tick - thread_mut.last_tick;
+            let ticks_taken = tick - thread_mut.last_tick;
+            thread_mut.total_ticks += ticks_taken;
+            thread_mut.left_tick_budget = thread_mut.left_tick_budget.saturating_sub(ticks_taken);
             thread_mut.last_tick = tick;
             let mut process: MutexGuard<'_, Process> = thread_mut.process.lock();
             process.total_ticks += tick - process.last_tick;
@@ -119,6 +122,24 @@ impl Scheduler for FirstComeFirstServedScheduler {
     }
 
     fn schedule(&mut self) -> Arc<Mutex<Thread>> {
+        if let Some(thread) = self.running_thread.clone() {
+            let still_has_budget = {
+                let mut thread_mut = thread.lock();
+                if thread_mut.left_tick_budget > 0
+                    && matches!(thread_mut.state, ThreadState::Ready)
+                {
+                    true
+                } else {
+                    if thread_mut.left_tick_budget == 0 {
+                        thread_mut.left_tick_budget = BASE_BUDGET;
+                    }
+                    false
+                }
+            };
+            if still_has_budget {
+                return thread;
+            }
+        }
         // We're taking the first process in the queue that returns a runnable thread
         let processes = &mut self.processes;
         let process = processes
@@ -133,24 +154,12 @@ impl Scheduler for FirstComeFirstServedScheduler {
         // Putting the process at the back of the queue
         self.processes.push_back(process);
 
-        if let Some(previous_thread) = self.running_thread.take()
-            && !Arc::ptr_eq(&previous_thread, &thread)
-        {
-            previous_thread
-                .clone()
-                .lock()
-                .process
-                .lock()
-                .ready_threads
-                .push(previous_thread);
-        }
-
         self.running_thread = Some(thread.clone());
         thread
     }
 }
 
-impl FirstComeFirstServedScheduler {
+impl RoundRobinScheduler {
     /// Returns the thread from the process that should be ran next.
     fn get_thread_to_run(&self, process: Arc<Mutex<Process>>) -> Arc<Mutex<Thread>> {
         let mut process_borrowed = process.lock();
@@ -178,14 +187,24 @@ impl FirstComeFirstServedScheduler {
 
 /// Removes the thread from its process. If this thread is the last one, the process is cleaned up.
 pub fn exit_thread(thread: Arc<Mutex<Thread>>) -> Result<(), AddressNotAligned> {
-    logln!("Exiting thread");
+    ilogln!("Exiting thread");
+    {
+        let mut scheduler = SCHEDULER.lock().unwrap();
+        if scheduler
+            .get_running_thread()
+            .as_ref()
+            .is_some_and(|running| Arc::ptr_eq(running, &thread))
+        {
+            scheduler.clear_running_thread();
+        }
+    }
     let mut borrowed_thread = thread.lock();
     let process = borrowed_thread.process.clone();
     let mut borrowed_process = process.lock();
 
     remove_thread_from_process_queues(&mut borrowed_process, &thread, borrowed_thread.state);
 
-    logln!("Removed thread from process");
+    ilogln!("Removed thread from process");
 
     check_should_remove_process(&mut borrowed_process, &mut borrowed_thread)?;
     Ok(())
@@ -198,16 +217,6 @@ pub fn remove_thread_from_process_queues(
     state: ThreadState,
 ) {
     match state {
-        ThreadState::Running => {
-            let mut scheduler = SCHEDULER.lock().unwrap();
-            if scheduler
-                .get_running_thread()
-                .as_ref()
-                .is_some_and(|t| Arc::ptr_eq(t, changed_thread))
-            {
-                scheduler.clear_running_thread();
-            }
-        }
         ThreadState::NotStarted => {
             borrowed_process
                 .not_started_threads
@@ -246,7 +255,7 @@ fn check_should_remove_process(
             .lock()
             .unwrap()
             .remove_process(&borrowed_thread.process);
-        logln!("Removed process from scheduler");
+        ilogln!("Removed process from scheduler");
         unsafe {
             clear_user_mode_mapping(borrowed_process.cr3.0)?;
         }
@@ -262,9 +271,6 @@ pub fn add_thread_to_process_queues(
     match state {
         ThreadState::NotStarted => borrowed_process.not_started_threads.push(thread.clone()),
         ThreadState::Ready => borrowed_process.ready_threads.push(thread.clone()),
-        ThreadState::Running => panic!(
-            "Trying to change a thread to running state - use dispatcher::switch_to_thread() instead"
-        ),
         ThreadState::Sleeping(_) => borrowed_process.sleeping_threads.push(thread.clone()),
         ThreadState::Terminated => {}
     }

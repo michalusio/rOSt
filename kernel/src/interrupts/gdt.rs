@@ -1,4 +1,4 @@
-use internal_utils::logln;
+use internal_utils::ilogln;
 use lazy_static::lazy_static;
 use x86_64::instructions::tables::load_tss;
 use x86_64::registers::segmentation::{CS, DS, ES, SS, Segment, SegmentSelector};
@@ -108,10 +108,10 @@ pub struct Selectors {
 
 /// Initialises the GDT and TSS.
 pub fn reload_gdt() {
-    logln!("[   ---{:^15}---   ]", "INTERRUPTS");
-    logln!("Loading GDT and segment registers");
+    ilogln!("[   ---{:^15}---   ]", "INTERRUPTS");
+    ilogln!("Loading GDT and segment registers");
     GDT.0.load();
-    logln!("GDT loaded");
+    ilogln!("GDT loaded");
     let selector = &GDT.1;
     unsafe {
         CS::set_reg(selector.kernel_code_selector);
@@ -120,5 +120,5 @@ pub fn reload_gdt() {
         ES::set_reg(selector.kernel_data_selector);
         load_tss(selector.tss_selector);
     }
-    logln!("Segment registers loaded");
+    ilogln!("Segment registers loaded");
 }

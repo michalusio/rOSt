@@ -1,2 +1,2 @@
 mod system_call;
-pub use system_call::setup_syscalls;
+pub use system_call::{setup_syscalls, syscall};

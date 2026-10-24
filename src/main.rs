@@ -29,6 +29,9 @@ fn main() {
 
     let mut cmd = Command::new("qemu-system-x86_64");
 
+    // Best CPU model
+    cmd.arg("-cpu").arg("max");
+
     // Memory size
     cmd.arg("-m").arg("1G");
 

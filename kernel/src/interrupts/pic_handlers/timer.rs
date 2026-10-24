@@ -1,4 +1,4 @@
-use internal_utils::clocks::get_current_tick;
+use internal_utils::{clocks::get_current_tick};
 
 use crate::{
     interrupts::pic::{InterruptIndex, PICS, Pics},

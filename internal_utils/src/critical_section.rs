@@ -32,7 +32,7 @@ unsafe impl critical_section::Impl for RpSpinlockCs {
         let interrupts_active = are_enabled();
         // We reserved 0 as our `LOCK_UNOWNED` value, so add 1 to core_id so we get 1 for core0, 2 for core1.
         // TODO: figure out the actual CPU id
-        let core = 0 as u8 + 1;
+        let core = 1;
         // Do we already own the spinlock?
         if LOCK_OWNER.load(Ordering::Acquire) == core {
             // We already own the lock, so we must have called acquire within a critical_section.

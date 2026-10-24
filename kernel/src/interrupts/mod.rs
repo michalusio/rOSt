@@ -6,7 +6,7 @@
 
 mod cpu_handlers;
 mod interrupt_register;
-use internal_utils::logln;
+use internal_utils::ilogln;
 pub(crate) mod gdt;
 mod pic_handlers;
 pub use gdt::GDT;
@@ -26,5 +26,5 @@ pub fn setup() {
     PICS.initialize();
     enable_irq(InterruptIndex::Timer);
     enable_keyboard_irq();
-    logln!("Interrupts set up");
+    ilogln!("Interrupts set up");
 }

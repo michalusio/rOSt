@@ -16,11 +16,11 @@ use bootloader_api::{BootInfo, entry_point};
 use core::panic::PanicInfo;
 use internal_utils::clocks::{self};
 use internal_utils::kernel_information::KernelInformation;
-use internal_utils::{logln, serial};
+use internal_utils::{ilogln, serial};
 use kernel::addressing::BOOTLOADER_CONFIG;
 use kernel::interrupts::{self};
+use kernel::memory;
 use kernel::{hlt_loop_hard, processes};
-use kernel::{memory, syscalls};
 
 use core::alloc::Layout;
 
@@ -31,7 +31,7 @@ pub fn kernel(boot_info: &'static mut BootInfo) -> ! {
     let allocator = memory::init_kernel_memory(boot_info);
     let kernel_info = KernelInformation::new(boot_info, allocator);
     interrupts::setup();
-    syscalls::setup_syscalls();
+    //syscalls::setup_syscalls();
     tbes::init_tag_store();
     ata::init_disks();
     vga::init_vga(kernel_info);
@@ -49,9 +49,9 @@ fn alloc_error_handler(layout: Layout) -> ! {
 pub fn panic_handler(info: &PanicInfo) -> ! {
     x86_64::instructions::interrupts::disable();
     internal_utils::serial::unlock_logger();
-    logln!("{}\n{}", internal_utils::ansi_colors::Red("[PANIC]"), info);
+    ilogln!("{}\n{}", internal_utils::ansi_colors::Red("[PANIC]"), info);
     if let Some(location) = info.location() {
-        logln!("panic occurred in {}", location);
+        ilogln!("panic occurred in {}", location);
     }
     hlt_loop_hard();
 }

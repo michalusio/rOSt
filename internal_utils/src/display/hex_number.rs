@@ -1,7 +1,7 @@
 use alloc::{format, string::String};
 use x86_64::{PhysAddr, VirtAddr};
 
-use crate::{log, structures::Permanent};
+use crate::{ilog, structures::Permanent};
 
 pub trait HexNumber {
     fn to_separated_hex(self) -> String;
@@ -21,14 +21,14 @@ impl HexNumber for PhysAddr {
     }
     fn log_to_separated_hex(self) {
         let value = self.as_u64();
-        log!("PhysAddr: 0x");
-        log!("{:04X}", (value >> 48) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", (value >> 32) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", (value >> 16) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", value & 0xFFFF);
+        ilog!("PhysAddr: 0x");
+        ilog!("{:04X}", (value >> 48) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", (value >> 32) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", (value >> 16) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", value & 0xFFFF);
     }
 }
 
@@ -54,14 +54,14 @@ impl HexNumber for VirtAddr {
     }
     fn log_to_separated_hex(self) {
         let value = self.as_u64();
-        log!("VirtAddr: 0x");
-        log!("{:04X}", (value >> 48) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", (value >> 32) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", (value >> 16) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", value & 0xFFFF);
+        ilog!("VirtAddr: 0x");
+        ilog!("{:04X}", (value >> 48) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", (value >> 32) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", (value >> 16) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", value & 0xFFFF);
     }
 }
 
@@ -78,14 +78,14 @@ impl HexNumber for u64 {
     }
     fn log_to_separated_hex(self) {
         let value = self;
-        log!("0x");
-        log!("{:04X}", (value >> 48) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", (value >> 32) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", (value >> 16) & 0xFFFF);
-        log!("_");
-        log!("{:04X}", value & 0xFFFF);
+        ilog!("0x");
+        ilog!("{:04X}", (value >> 48) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", (value >> 32) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", (value >> 16) & 0xFFFF);
+        ilog!("_");
+        ilog!("{:04X}", value & 0xFFFF);
     }
 }
 
@@ -94,6 +94,6 @@ impl HexNumber for u16 {
         format!("0x{:04X}", self)
     }
     fn log_to_separated_hex(self) {
-        log!("0x{:04X}", self);
+        ilog!("0x{:04X}", self);
     }
 }

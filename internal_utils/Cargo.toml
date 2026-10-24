@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = { workspace = true }
 
 [dependencies]
+bytemuck = { version = "1", default-features = false, features = [
+    "derive",
+    "min_const_generics",
+] }
 x86_64 = { workspace = true }
 bootloader_api = { workspace = true }
 spin = { workspace = true }

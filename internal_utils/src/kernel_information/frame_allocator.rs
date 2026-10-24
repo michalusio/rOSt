@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use spin::Mutex;
 use x86_64::structures::paging::{FrameAllocator, FrameDeallocator, Size2MiB, Size4KiB};
 
-use crate::{display::format_size, kernel_information::allocator::ALLOCATOR, logln};
+use crate::{display::format_size, kernel_information::allocator::ALLOCATOR, ilogln};
 
 pub trait FullFrameAllocator:
     FrameAllocator<Size4KiB>
@@ -36,7 +36,7 @@ pub fn print_heap_memory() {
         let heap_allocator = ALLOCATOR.lock();
         (heap_allocator.used(), heap_allocator.size())
     };
-    logln!(
+    ilogln!(
         "{:<14}{:>7}/{:>7}",
         "Heap memory:",
         format_size(used as u64),
@@ -48,7 +48,7 @@ pub fn print_frame_memory(allocator: Arc<Mutex<dyn FullFrameAllocator + Send + S
     #[cfg(debug_assertions)]
     {
         let locked = allocator.lock();
-        logln!("[   ---{:^15}---   ]", "FRAME ALLOCATOR");
+        ilogln!("[   ---{:^15}---   ]", "FRAME ALLOCATOR");
         {
             let mut size = locked.get_total_usable_memory();
             let mut size_format = "B";
@@ -64,7 +64,7 @@ pub fn print_frame_memory(allocator: Arc<Mutex<dyn FullFrameAllocator + Send + S
                     size_format = "GiB";
                 }
             }
-            logln!("{:<15}{:>10}{:>4}", "Total memory:", size, size_format);
+            ilogln!("{:<15}{:>10}{:>4}", "Total memory:", size, size_format);
         }
         {
             let mut size = locked.get_free_memory_size();
@@ -81,7 +81,7 @@ pub fn print_frame_memory(allocator: Arc<Mutex<dyn FullFrameAllocator + Send + S
                     size_format = "GiB";
                 }
             }
-            logln!("{:<15}{:>10}{:>4}", "Free memory:", size, size_format);
+            ilogln!("{:<15}{:>10}{:>4}", "Free memory:", size, size_format);
         }
         {
             let mut low_memory = locked.get_free_dma_memory();
@@ -98,7 +98,7 @@ pub fn print_frame_memory(allocator: Arc<Mutex<dyn FullFrameAllocator + Send + S
                     size_format = "GiB";
                 }
             }
-            logln!(
+            ilogln!(
                 "{:<16}{:>9}{:>4}",
                 "Free DMA memory:",
                 low_memory,
@@ -107,11 +107,11 @@ pub fn print_frame_memory(allocator: Arc<Mutex<dyn FullFrameAllocator + Send + S
         }
         {
             let frames = locked.get_free_2m_frames();
-            logln!("{:<15}{:>14}", "Free 2M frames:", frames);
+            ilogln!("{:<15}{:>14}", "Free 2M frames:", frames);
         }
         {
             let frames = locked.get_free_4k_frames();
-            logln!("{:<15}{:>14}", "Free 4K frames:", frames);
+            ilogln!("{:<15}{:>14}", "Free 4K frames:", frames);
         }
     }
 }

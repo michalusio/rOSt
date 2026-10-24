@@ -15,25 +15,25 @@ use internal_utils::{
         BLACK, GPU_DEVICE, GPUDevice, GPUDeviceCapabilityMut, GPUDeviceCapabilityRequest,
     },
     kernel_information::KernelInformation,
-    logln,
+    ilogln,
 };
 use tinytga::RawTga;
 
 use crate::vga_device::VGADeviceFactory;
 
 pub fn init_vga(kernel_info: KernelInformation) {
-    logln!("[   ---{:^15}---   ]", "VGA");
+    ilogln!("[   ---{:^15}---   ]", "VGA");
     if let Some(buffer) = kernel_info.framebuffer.as_ref() {
-        logln!("Width: {} (Stride: {})", buffer.width, buffer.stride);
-        logln!("Height: {}", buffer.height);
-        logln!("Bytes per pixel: {}", buffer.bytes_per_pixel);
-        logln!("Pixel format: {}", buffer.format);
+        ilogln!("Width: {} (Stride: {})", buffer.width, buffer.stride);
+        ilogln!("Height: {}", buffer.height);
+        ilogln!("Bytes per pixel: {}", buffer.bytes_per_pixel);
+        ilogln!("Pixel format: {}", buffer.format);
     } else {
-        logln!("NO FRAME BUFFER FOUND");
+        ilogln!("NO FRAME BUFFER FOUND");
         return;
     }
     let mut vga_device = VGADeviceFactory::from_kernel_info(kernel_info);
-    logln!("VGA device created");
+    ilogln!("VGA device created");
     show_logo(&mut vga_device);
 
     GPU_DEVICE.call_once(|| Box::new(vga_device));
@@ -42,7 +42,7 @@ pub fn init_vga(kernel_info: KernelInformation) {
 fn show_logo<T: GPUDevice>(device: &mut T) {
     let data = include_bytes!("./assets/rost-logo.tga");
     let logo = RawTga::from_slice(data).unwrap();
-    logln!("Logo loaded");
+    ilogln!("Logo loaded");
 
     let logo_header = logo.header();
 
@@ -50,9 +50,9 @@ fn show_logo<T: GPUDevice>(device: &mut T) {
         device.get_capability_mut(GPUDeviceCapabilityRequest::Clearable)
     {
         clearable.clear(BLACK);
-        logln!("VGA image cleared");
+        ilogln!("VGA image cleared");
     } else {
-        logln!("No clearing capability detected");
+        ilogln!("No clearing capability detected");
     }
 
     if let Some(GPUDeviceCapabilityMut::Image(imageable)) =
@@ -63,16 +63,16 @@ fn show_logo<T: GPUDevice>(device: &mut T) {
             (imageable.height() as u16 - logo_header.height) / 2,
             &logo,
         );
-        logln!("Logo drawn");
+        ilogln!("Logo drawn");
     } else {
-        logln!("No logo drawing capability detected");
+        ilogln!("No logo drawing capability detected");
     }
     if let Some(GPUDeviceCapabilityMut::Flush(flush)) =
         device.get_capability_mut(GPUDeviceCapabilityRequest::Flush)
     {
         flush.flush();
-        logln!("VGA flushed");
+        ilogln!("VGA flushed");
     } else {
-        logln!("No VGA flushing capability detected");
+        ilogln!("No VGA flushing capability detected");
     }
 }

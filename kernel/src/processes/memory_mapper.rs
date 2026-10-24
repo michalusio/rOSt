@@ -1,6 +1,6 @@
 use core::sync::atomic::fence;
 
-use internal_utils::{kernel_information::KERNEL_INFORMATION, logln};
+use internal_utils::{kernel_information::KERNEL_INFORMATION, ilogln};
 use x86_64::{
     PhysAddr,
     structures::paging::{
@@ -14,7 +14,7 @@ pub unsafe fn get_user_mode_mapping() -> Option<(PhysFrame, PhysAddr)> {
     let pmo = kernel_info.physical_memory_offset;
     let allocator = kernel_info.allocator;
 
-    logln!("Creating user mode mapping");
+    ilogln!("Creating user mode mapping");
 
     let mut allocator = allocator.lock();
     let level_4_frame: PhysFrame<Size4KiB> = allocator.allocate_frame()?;
@@ -123,7 +123,7 @@ pub unsafe fn clear_user_mode_mapping(level_4_frame: PhysFrame) -> Result<(), Ad
         allocator.deallocate_frame(level_3_frame);
         allocator.deallocate_frame(level_4_frame);
     }
-    logln!("Cleared user mode mapping");
+    ilogln!("Cleared user mode mapping");
 
     Ok(())
 }

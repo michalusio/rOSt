@@ -14,7 +14,7 @@ use alloc::{
 };
 use crosstrait::Cast;
 use internal_utils::{
-    logln,
+    ilogln,
     tag_store::{
         BooleanTag, Entity, IntegerTag, KERNEL_IDENTITY, OWNER_TAG_IDENTITY, Query, QueryOptions,
         QueryResult, RefTag, TAG_STORE, TAG_TAG_IDENTITY, TIMESTAMP_TAG_IDENTITY, Tag,
@@ -323,9 +323,9 @@ impl TagStore for TBESTagStore {
 }
 
 pub fn init_tag_store() {
-    logln!("Initializing tag store");
+    ilogln!("Initializing tag store");
     let store = TBESTagStore::new();
     let store = Box::new(store);
     TAG_STORE.call_once(|| store);
-    logln!("Tag store initialized");
+    ilogln!("Tag store initialized");
 }

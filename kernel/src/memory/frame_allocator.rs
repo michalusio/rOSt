@@ -1,6 +1,6 @@
 use bootloader_api::{BootInfo, info::MemoryRegionKind};
 use internal_utils::{
-    HexNumber, kernel_information::frame_allocator::FullFrameAllocator, log, logln,
+    HexNumber, kernel_information::frame_allocator::FullFrameAllocator, ilog, ilogln,
 };
 use x86_64::{
     PhysAddr, VirtAddr,
@@ -51,27 +51,41 @@ impl BitmapFrameAllocator {
         // We first need to take a 2M frame and a 4K frame from the memory map for the bitflags.
         // We should probably spread it so we allocate the frames anywhere where they fit
         // , but for now let's just find a region that will fit them all.
-        let usable_memory_region = memory_map
+        let (four_kilobytes_frames_bitflag, two_megabyte_frames_bitflag) = memory_map
             .iter()
-            .filter(|region| {
-                // We skip regions below the lower limit
-                let start = region.start.max(LOW_MEMORY_LIMIT);
-                let end = region.end.max(start);
-                end - start >= Size2MiB::SIZE + Size4KiB::SIZE
+            .find_map(|region| {
+                if region.kind != MemoryRegionKind::Usable {
+                    None
+                } else {
+                    // We skip regions below the lower limit
+                    let start = region.start.max(LOW_MEMORY_LIMIT);
+                    let end = region.end.max(start);
+                    if end - start < Size2MiB::SIZE + Size4KiB::SIZE {
+                        None
+                    } else {
+                        get_bitflag_frames(PhysAddr::new(start), PhysAddr::new(end))
+                    }
+                }
             })
-            .find(|region| region.kind == MemoryRegionKind::Usable)
             .unwrap();
 
-        log!("Using region (");
-        usable_memory_region.start.log_to_separated_hex();
-        log!(") - (");
-        usable_memory_region.end.log_to_separated_hex();
-        logln!(") for the frame allocator");
+        ilog!("Using region (");
+        two_megabyte_frames_bitflag
+            .start_address()
+            .log_to_separated_hex();
+        ilog!(") - (");
+        (two_megabyte_frames_bitflag.start_address() + two_megabyte_frames_bitflag.size())
+            .log_to_separated_hex();
+        ilogln!(") for the 2M bitmap");
 
-        let allocation_start = usable_memory_region.start.max(LOW_MEMORY_LIMIT);
-
-        let (four_kilobytes_frames_bitflag, two_megabyte_frames_bitflag) =
-            get_bitflag_frames(PhysAddr::new(allocation_start));
+        ilog!("Using region (");
+        four_kilobytes_frames_bitflag
+            .start_address()
+            .log_to_separated_hex();
+        ilog!(") - (");
+        (four_kilobytes_frames_bitflag.start_address() + four_kilobytes_frames_bitflag.size())
+            .log_to_separated_hex();
+        ilogln!(") for the 4K bitmap");
 
         let four_kilo_frame = unsafe {
             VirtAddr::new(four_kilobytes_frames_bitflag.start_address().as_u64() + pmo)
@@ -86,7 +100,7 @@ impl BitmapFrameAllocator {
                 .unwrap()
         };
 
-        logln!("Clearing the allocation bitmaps");
+        ilogln!("Clearing the allocation bitmaps");
         // We set everything as used because BIOS may return holes in the memory map.
         four_kilo_frame.fill(u64::MAX);
         two_mega_frame.fill(u64::MAX);
@@ -109,10 +123,10 @@ impl BitmapFrameAllocator {
         {
             let start =
                 PhysFrame::containing_address(PhysAddr::new(region.start).align_up(Size4KiB::SIZE));
-            let end = PhysFrame::containing_address(
-                PhysAddr::new(region.end - 1).align_down(Size4KiB::SIZE),
-            );
-            let frame_range = PhysFrame::<Size4KiB>::range_inclusive(start, end);
+            let end =
+                PhysFrame::containing_address(PhysAddr::new(region.end).align_down(Size4KiB::SIZE));
+
+            let frame_range = PhysFrame::<Size4KiB>::range(start, end);
 
             frame_range
                 .filter(|f| f.start_address().as_u64() >= LOW_MEMORY_LIMIT)
@@ -124,16 +138,20 @@ impl BitmapFrameAllocator {
         }
 
         // We set the regions where we placed the frame allocator as taken
-        allocator.set_used_lock(
-            four_kilobytes_frames_bitflag.start_address().as_u64(),
-            Size2MiB::SIZE,
-        );
-        allocator.set_used_lock(
-            two_megabyte_frames_bitflag.start_address().as_u64(),
-            Size4KiB::SIZE,
-        );
+        allocator
+            .set_used_lock(
+                four_kilobytes_frames_bitflag.start_address().as_u64(),
+                Size2MiB::SIZE,
+            )
+            .expect("Setting the 4K bitmap region as used should not fail");
+        allocator
+            .set_used_lock(
+                two_megabyte_frames_bitflag.start_address().as_u64(),
+                Size4KiB::SIZE,
+            )
+            .expect("Setting the 2M bitmap region as used should not fail");
 
-        logln!(
+        ilogln!(
             "Next frame hints: {} (2M) and {} (4K)",
             allocator.next_free_2m_frame_guess,
             allocator.next_free_4k_frame_guess
@@ -293,7 +311,9 @@ where
     S: PageSize,
 {
     unsafe fn deallocate_frame(&mut self, frame: PhysFrame<S>) {
-        self.set_unused_lock(frame.start_address().as_u64(), frame.size());
+        // the API does not allow returning an error here
+        self.set_unused_lock(frame.start_address().as_u64(), frame.size())
+            .unwrap();
     }
 }
 
@@ -357,7 +377,10 @@ unsafe impl FrameAllocator<Size2MiB> for BitmapFrameAllocator {
 /// Allocates the frames required for the frame allocator.
 ///
 /// Chicken and egg?
-fn get_bitflag_frames(start_address: PhysAddr) -> (PhysFrame<Size2MiB>, PhysFrame<Size4KiB>) {
+fn get_bitflag_frames(
+    start_address: PhysAddr,
+    end_address: PhysAddr,
+) -> Option<(PhysFrame<Size2MiB>, PhysFrame<Size4KiB>)> {
     let four_kilobytes_frames_bitflag: PhysFrame<Size2MiB>;
     let two_megabyte_frames_bitflag: PhysFrame<Size4KiB>;
     // We need to allocate one 2M frame and 2x4K frames, but the region addresses do not have to be 2M aligned!
@@ -378,13 +401,17 @@ fn get_bitflag_frames(start_address: PhysAddr) -> (PhysFrame<Size2MiB>, PhysFram
         two_megabyte_frames_bitflag = PhysFrame::<Size4KiB>::from_start_address(start_address)
             .expect("4K frame address not aligned");
     } else {
-        four_kilobytes_frames_bitflag =
-            PhysFrame::<Size2MiB>::from_start_address(start_address.align_up(Size2MiB::SIZE))
-                .expect("2M frame address not aligned");
+        // If we can't fit the aligned 2M frame we return None
+        let k_address = start_address.align_up(Size2MiB::SIZE);
+        if k_address.as_u64() + Size2MiB::SIZE > end_address.as_u64() {
+            return None;
+        }
+        four_kilobytes_frames_bitflag = PhysFrame::<Size2MiB>::from_start_address(k_address)
+            .expect("2M frame address not aligned");
         two_megabyte_frames_bitflag = PhysFrame::<Size4KiB>::from_start_address(start_address)
             .expect("4K frame address not aligned");
     }
-    (four_kilobytes_frames_bitflag, two_megabyte_frames_bitflag)
+    Some((four_kilobytes_frames_bitflag, two_megabyte_frames_bitflag))
 }
 
 impl FullFrameAllocator for BitmapFrameAllocator {

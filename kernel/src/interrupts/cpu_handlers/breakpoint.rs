@@ -1,9 +1,9 @@
-use internal_utils::logln;
+use internal_utils::ilogln;
 use x86_64::structures::idt::InterruptStackFrame;
 
 use crate::hlt_loop_hard;
 
 pub extern "x86-interrupt" fn breakpoint_handler(_: InterruptStackFrame) {
-    logln!("BREAKPOINT");
+    ilogln!("BREAKPOINT");
     hlt_loop_hard();
 }

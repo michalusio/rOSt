@@ -4,9 +4,9 @@ use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 pub fn print_memory_map(memory_map: &MemoryRegions) {
     #[cfg(debug_assertions)]
     {
-        use internal_utils::{HexNumber, log, logln};
+        use internal_utils::{HexNumber, ilog, ilogln};
 
-        logln!("[   ---{:^15}---   ]", "MEMORY MAP");
+        ilogln!("[   ---{:^15}---   ]", "MEMORY MAP");
         memory_map.iter().for_each(|region| {
             let mut size = region.end - region.start;
             let mut size_format = "  B";
@@ -18,16 +18,16 @@ pub fn print_memory_map(memory_map: &MemoryRegions) {
                     size_format = "MiB";
                 }
             }
-            log!(
+            ilog!(
                 "{:28} - {:>6}{:>4}  (",
                 decode_memory_kind(region.kind),
                 size,
                 size_format,
             );
             region.start.log_to_separated_hex();
-            log!(") - (");
+            ilog!(") - (");
             region.end.log_to_separated_hex();
-            logln!(")");
+            ilogln!(")");
         });
     }
 }

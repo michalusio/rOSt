@@ -14,8 +14,8 @@ use internal_utils::tag_store::{
 };
 use internal_utils::{
     clocks::{get_current_tick, get_current_time},
+    ilog, ilogln,
     kernel_information::{KERNEL_INFORMATION, frame_allocator::print_memory},
-    log, logln,
 };
 use x86_64::registers::read_rip;
 
@@ -33,13 +33,13 @@ pub fn parse_command(command: &str) -> bool {
         let result = f(&mut arguments);
         match result {
             Err(s) => {
-                logln!("{}", s);
+                ilogln!("{}", s);
                 false
             }
             Ok(f) => f,
         }
     } else {
-        logln!("Invalid command. Try \"help\".");
+        ilogln!("Invalid command. Try \"help\".");
         false
     }
 }
@@ -64,9 +64,9 @@ fn help(args: Arguments) -> Result<bool, Cow<'static, str>> {
     if args.next().is_some() {
         return Err("help does not accept arguments".into());
     }
-    logln!("Available commands:");
+    ilogln!("Available commands:");
     for (c, _) in COMMANDS {
-        logln!("- {}", c);
+        ilogln!("- {}", c);
     }
     Ok(false)
 }
@@ -97,17 +97,17 @@ fn memory(args: Arguments) -> Result<bool, Cow<'static, str>> {
             _ => Err("Invalid subcommand".into()),
         }
     } else {
-        logln!("memory subcommands:");
-        logln!("- {:<20} | Shows memory information", "info");
-        logln!(
+        ilogln!("memory subcommands:");
+        ilogln!("- {:<20} | Shows memory information", "info");
+        ilogln!(
             "- {:<20} | Shows a slice of virtual memory in a hex view",
             "view from:to"
         );
-        logln!(
+        ilogln!(
             "- {:<20} | Shows a slice of physical memory in a hex view",
             "viewp from:to"
         );
-        logln!(
+        ilogln!(
             "- {:<20} | Shows a slice of kernel memory in a hex view",
             "viewk from:to"
         );
@@ -124,9 +124,9 @@ fn exit(args: Arguments) -> Result<bool, Cow<'static, str>> {
             _ => Err("Invalid subcommand".into()),
         }
     } else {
-        logln!("exit subcommands:");
-        logln!("- {:<20} | Closes QEMU (if applicable)", "qemu");
-        logln!("- {:<20} | Closes IKD (if possible)", "ikd");
+        ilogln!("exit subcommands:");
+        ilogln!("- {:<20} | Closes QEMU (if applicable)", "qemu");
+        ilogln!("- {:<20} | Closes IKD (if possible)", "ikd");
         Ok(false)
     }
 }
@@ -154,8 +154,8 @@ fn kernel(args: Arguments) -> Result<bool, Cow<'static, str>> {
             _ => Err("Invalid subcommand".into()),
         }
     } else {
-        logln!("kernel subcommands:");
-        logln!("- {:<20} | Shows kernel information", "info");
+        ilogln!("kernel subcommands:");
+        ilogln!("- {:<20} | Shows kernel information", "info");
         Ok(false)
     }
 }
@@ -177,21 +177,21 @@ fn view_memory_slice(from: usize, to: usize, offset: u64) {
     while index <= to - from {
         let pointer = (index + from + offset) as *const u8;
         let value = unsafe { *pointer };
-        log!("{:02X} ", value);
+        ilog!("{:02X} ", value);
         let ch = char::from_u32(value as u32)
             .filter(char::is_ascii_alphanumeric)
             .unwrap_or('.');
         buffer[(index & 15) as usize] = ch;
         index += 1;
         if index & 15 == 0 {
-            logln!("| {}", String::from_iter(buffer));
+            ilogln!("| {}", String::from_iter(buffer));
         }
     }
     if index & 15 != 0 {
         for _ in 0..(16 - (index & 15)) {
-            log!("   ");
+            ilog!("   ");
         }
-        logln!(
+        ilogln!(
             "| {}",
             String::from_iter(buffer.iter().take((index & 15) as usize))
         );
@@ -202,8 +202,8 @@ fn clocks(args: Arguments) -> Result<bool, Cow<'static, str>> {
     if args.next().is_some() {
         Err("clocks does not accept arguments".into())
     } else {
-        logln!("Ticks: {}", get_current_tick());
-        logln!("RTC Time: {}", get_current_time());
+        ilogln!("Ticks: {}", get_current_tick());
+        ilogln!("RTC Time: {}", get_current_time());
         Ok(false)
     }
 }
@@ -213,8 +213,8 @@ fn ip(args: Arguments) -> Result<bool, Cow<'static, str>> {
         Err("ip does not accept arguments".into())
     } else {
         let ip = read_rip();
-        logln!("Current instruction pointer: {}", ip.to_separated_hex());
-        logln!("Though tbh it's kinda useless");
+        ilogln!("Current instruction pointer: {}", ip.to_separated_hex());
+        ilogln!("Though tbh it's kinda useless");
         Ok(false)
     }
 }
@@ -235,9 +235,9 @@ fn scheduler(args: Arguments) -> Result<bool, Cow<'static, str>> {
             _ => Err("Invalid subcommand".into()),
         }
     } else {
-        logln!("scheduler subcommands:");
-        logln!("- {:<20} | Shows processes", "processes");
-        logln!("- {:<20} | Runs the scheduler", "run");
+        ilogln!("scheduler subcommands:");
+        ilogln!("- {:<20} | Shows processes", "processes");
+        ilogln!("- {:<20} | Runs the scheduler", "run");
         Ok(false)
     }
 }
@@ -320,10 +320,10 @@ fn tbes(args: Arguments) -> Result<bool, Cow<'static, str>> {
         query_plan,
     } = store.query(query, QueryOptions { show_query_plan });
     if let Some(plan) = query_plan {
-        logln!("Query plan: {}", plan);
+        ilogln!("Query plan: {}", plan);
     }
     for id in identities {
-        logln!("{}", id);
+        ilogln!("{}", id);
     }
     Ok(false)
 }

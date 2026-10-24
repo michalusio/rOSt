@@ -11,7 +11,7 @@ use crate::{
     kernel_information::{
         frame_allocator::FullFrameAllocator, kernel_frame_buffer::KernelFrameBuffer,
     },
-    logln,
+    ilogln,
     structures::OnceClone,
 };
 
@@ -58,38 +58,38 @@ impl KernelInformation {
     }
 
     pub fn print(&self) {
-        logln!("[   ---{:^15}---   ]", "KERNEL INFO");
+        ilogln!("[   ---{:^15}---   ]", "KERNEL INFO");
         let v = self.bootloader_version;
-        logln!(
+        ilogln!(
             "{:<20} {:>26}.{:02}.{:02}",
             "Bootloader version:",
             v.0,
             v.1,
             v.2
         );
-        logln!(
+        ilogln!(
             "{:<20} {:>32}",
             "Kernel start:",
             self.kernel_start.to_separated_hex()
         );
         if let Some(rsdp) = self.rsdp.as_ref() {
-            logln!("{:<20} {:>32}", "RSDP:", rsdp.to_separated_hex());
+            ilogln!("{:<20} {:>32}", "RSDP:", rsdp.to_separated_hex());
         } else {
-            logln!("{:<20} {:>32}", "RSDP:", "No RSDP found")
+            ilogln!("{:<20} {:>32}", "RSDP:", "No RSDP found")
         }
-        logln!(
+        ilogln!(
             "{:<20} {:>32}",
             "Physical memory map:",
             self.physical_memory_offset.to_separated_hex()
         );
         if let Some(b) = self.framebuffer.as_ref() {
-            logln!(
+            ilogln!(
                 "{:<20} {:>32}",
                 "Frame buffer:",
                 b.buffer.to_separated_hex()
             );
         } else {
-            logln!("{:<20} {:>32}", "Frame buffer:", "No buffer");
+            ilogln!("{:<20} {:>32}", "Frame buffer:", "No buffer");
         }
     }
 }

@@ -8,7 +8,7 @@ use alloc::sync::Arc;
 use bootloader_api::{BootInfo, info::FrameBuffer};
 use internal_utils::{
     kernel_information::frame_allocator::{FullFrameAllocator, print_memory},
-    logln,
+    ilogln,
 };
 use memory_init::init_page_tables;
 
@@ -109,5 +109,5 @@ fn enable_framebuffer_writethrough(frame_buffer: &FrameBuffer) {
         }
     }
     tlb::flush_all();
-    logln!("Enabled framebuffer write-through");
+    ilogln!("Enabled framebuffer write-through");
 }

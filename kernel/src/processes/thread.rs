@@ -5,7 +5,7 @@ use x86_64::VirtAddr;
 
 use crate::processes::registers_state::Flags;
 use crate::processes::scheduler::{
-    add_thread_to_process_queues, remove_thread_from_process_queues,
+    BASE_BUDGET, add_thread_to_process_queues, remove_thread_from_process_queues,
 };
 use crate::processes::wakers::WakeHandle;
 
@@ -17,7 +17,6 @@ use super::RegistersState;
 pub enum ThreadState {
     NotStarted,
     Ready,
-    Running,
     Sleeping(WakeHandle),
     Terminated,
 }
@@ -36,6 +35,8 @@ pub struct Thread {
     pub start_tick: u64,
     /// The tick the thread has been last ran on.
     pub last_tick: u64,
+    /// The ticks left in the budget for that thread.
+    pub left_tick_budget: u64,
     /// The process the thread is running for.
     pub process: Arc<Mutex<Process>>,
 }
@@ -75,6 +76,7 @@ impl Thread {
             total_ticks: 0,
             start_tick: get_current_tick(),
             last_tick: 0,
+            left_tick_budget: BASE_BUDGET,
             process: process.clone(),
             registers_state: RegistersState::new(
                 VirtAddr::new(address as u64),

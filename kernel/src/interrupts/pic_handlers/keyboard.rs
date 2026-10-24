@@ -1,4 +1,4 @@
-use internal_utils::logln;
+use internal_utils::ilogln;
 use lazy_static::lazy_static;
 use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts};
 use spin::Mutex;
@@ -36,8 +36,8 @@ pub extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: Interrupt
     {
         match key {
             // ! this introduces deadlock potential because print will lock the VgaTextBufferInterface
-            DecodedKey::Unicode(character) => logln!("{}", character),
-            DecodedKey::RawKey(key) => logln!("{:?}", key),
+            DecodedKey::Unicode(character) => ilogln!("{}", character),
+            DecodedKey::RawKey(key) => ilogln!("{:?}", key),
         }
     }
 

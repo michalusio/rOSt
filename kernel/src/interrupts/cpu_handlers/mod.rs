@@ -36,3 +36,6 @@ pub use stack_segment_fault::stack_segment_fault_handler;
 
 mod debug;
 pub use debug::debug_handler;
+
+mod syscall;
+pub use syscall::syscall_interrupt_handler;

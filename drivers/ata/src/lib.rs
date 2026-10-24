@@ -17,7 +17,7 @@ pub use disk_descriptor::DiskDescriptor;
 mod partition_descriptor;
 use internal_utils::{
     block_device::{BLOCK_DEVICES, BootableBlockDevice},
-    format_size, logln,
+    format_size, ilogln,
 };
 pub use partition_descriptor::PartitionDescriptor;
 
@@ -37,7 +37,7 @@ pub fn init_disks() {
     let disk_b = ATABus::get_disk(&crate::PRIMARY_ATA_BUS, false);
     let disk_c = ATABus::get_disk(&crate::SECONDARY_ATA_BUS, true);
     let disk_d = ATABus::get_disk(&crate::SECONDARY_ATA_BUS, false);
-    logln!("[   ---{:^15}---   ]", "DISKS");
+    ilogln!("[   ---{:^15}---   ]", "DISKS");
     init_disk(disk_a);
     init_disk(disk_b);
     init_disk(disk_c);
@@ -47,7 +47,7 @@ pub fn init_disks() {
 fn init_disk(disk: (&'static str, Result<ATADisk, ATAIdentifyError>)) {
     match disk.1 {
         Ok(ata_disk) => {
-            logln!(
+            ilogln!(
                 "[{:^11}] {:<20}: {} ({} partitions){}",
                 disk.0,
                 ata_disk.descriptor.model_number().trim(),
@@ -74,6 +74,6 @@ fn init_disk(disk: (&'static str, Result<ATADisk, ATAIdentifyError>)) {
                 .unwrap()
                 .push(Box::new(Mutex::new(ata_disk)));
         }
-        Err(err) => logln!("[{:^11}] {}", disk.0, err),
+        Err(err) => ilogln!("[{:^11}] {}", disk.0, err),
     }
 }

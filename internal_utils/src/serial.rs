@@ -1,14 +1,23 @@
-use core::{ffi::CStr, fmt::Write};
+use core::{
+    ffi::CStr,
+    fmt::{Error, Write},
+};
 
-use spin::Mutex;
+use alloc::vec;
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
+use spin::{Mutex, MutexGuard};
 use uart_16550::SerialPort;
 
 use crate::{
+    ilogln,
+    kernel_information::allocator::ALLOCATOR,
     logger::{LOGGER, Logger},
-    logln,
 };
 
-static mut UART: SerialLogger = SerialLogger(Mutex::new(unsafe { SerialPort::new(0x3F8) }));
+static mut UART: SerialLogger = SerialLogger(Mutex::new(unsafe { SerialPort::new(0x3F8) }), None);
 
 pub fn init_logger() {
     #[allow(static_mut_refs)]
@@ -17,7 +26,7 @@ pub fn init_logger() {
         UART.init();
         LOGGER.call_once(|| &mut UART);
     };
-    logln!("Initialized UART logger");
+    ilogln!("Initialized UART logger");
 }
 
 pub fn unlock_logger() {
@@ -27,17 +36,34 @@ pub fn unlock_logger() {
     }
 }
 
-struct SerialLogger(Mutex<SerialPort>);
+struct SerialLogger(Mutex<SerialPort>, Option<LogBuffer>);
+struct LogBuffer(Vec<(String, u32)>);
 
 impl SerialLogger {
     fn init(&mut self) {
         self.0.lock().init();
+    }
+
+    fn flush(port: &mut MutexGuard<'_, SerialPort>, buffer: &mut LogBuffer) -> core::fmt::Result {
+        for (item, count) in buffer.0.drain(..) {
+            match count {
+                0 => {}
+                1 => port.write_str(&item)?,
+                _ => {
+                    write!(port, "(x{}) {}", count, &item)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
 impl Write for SerialLogger {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         if let Some(mut locked) = self.0.try_lock() {
+            if let Some(buffer) = self.1.as_mut() {
+                SerialLogger::flush(&mut locked, buffer)?;
+            }
             locked.write_str(s)
         } else {
             // I will NOT be ignored!
@@ -98,5 +124,49 @@ impl Logger for SerialLogger {
         } else {
             None
         }
+    }
+
+    fn supports_buffered_write(&mut self) -> bool {
+        let has_initialized_allocator = ALLOCATOR.try_lock().is_some_and(|alloc| alloc.size() > 0);
+
+        if !has_initialized_allocator {
+            false
+        } else {
+            self.1.get_or_insert_with(|| LogBuffer(vec![]));
+            true
+        }
+    }
+
+    fn buffered_write_fmt<'a>(&'_ mut self, args: core::fmt::Arguments<'a>) -> core::fmt::Result {
+        if let Some(buffer) = self.1.as_mut() {
+            alloc::fmt::write(buffer, args)
+        } else {
+            Err(Error)
+        }
+    }
+
+    fn flush(&mut self) -> core::fmt::Result {
+        if let Some(buffer) = self.1.as_mut() {
+            if let Some(mut locked) = self.0.try_lock() {
+                SerialLogger::flush(&mut locked, buffer)
+            } else {
+                Ok(())
+            }
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Write for LogBuffer {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        if let Some(last) = self.0.last_mut()
+            && last.0 == s
+        {
+            last.1 += 1;
+        } else {
+            self.0.push((s.to_string(), 1));
+        }
+        Ok(())
     }
 }
