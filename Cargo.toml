@@ -47,7 +47,7 @@ itertools = { version = "0.15.0", default-features = false, features = [
 bitflags = { version = "2.13.0", default-features = false }
 bootloader_api = { version = "0.11" }
 pic8259 = { version = "0.11.0" }
-noto-sans-mono-bitmap = { version = "0.3.2" }
+noto-sans-mono-bitmap = { version = "0.4.0" }
 pc-keyboard = { version = "0.8.0" }
 linked_list_allocator = { version = "0.10.6", default-features = false, features = [
     "use_spin",

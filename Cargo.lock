@@ -666,9 +666,9 @@ dependencies = [
 
 [[package]]
 name = "noto-sans-mono-bitmap"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f102c477fd4ec864c149803bf606ecc23bc9329602ec0f99073a728abf454abc"
+checksum = "09b7b72dee69e4110d1b91fb8d497c1b74a54082da5738dff84136142c4f767b"
 
 [[package]]
 name = "num-traits"
